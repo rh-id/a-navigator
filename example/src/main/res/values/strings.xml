@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">a-navigator</string>
+    <string name="title_activity_raw">RawActivity</string>
+    <string name="title_activity_appcompat">AppCompatExampleActivity</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+    <string name="home_page">Home Page</string>
+    <string name="second_page">Second Page</string>
+    <string name="appcompat_page">AppCompat Home Page</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+
+    <string name="menu_home_appcompat">Open AppCompat as Activity</string>
+    <string name="menu_second">Second Page</string>
+    <string name="welcome_to_home_page">Welcome to home page</string>
+    <string name="welcome_to_appcompat_home_page">Welcome to app compat home page</string>
+</resources>
