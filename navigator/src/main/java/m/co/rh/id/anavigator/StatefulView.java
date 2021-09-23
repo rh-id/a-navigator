@@ -3,14 +3,16 @@ package m.co.rh.id.anavigator;
 import android.app.Activity;
 import android.view.View;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 /**
- * An abstract object to act as a glue between state and view
+ * An abstract object to act as a glue between state and view.
+ * NOTE: Always call super implementation when extending this.
  */
-public abstract class StatefulView<ACT extends Activity> {
+public abstract class StatefulView<ACT extends Activity> implements Serializable {
     private boolean mIsInitialized;
-    private String mKey;
+    private final String mKey;
 
     public StatefulView() {
         this(null);
@@ -59,14 +61,15 @@ public abstract class StatefulView<ACT extends Activity> {
     }
 
     /**
-     * Initialize state. This method will be called once only when {@link #buildView(Activity)} is called
+     * Initialize state. This method will be called once only when {@link #buildView(Activity)} is called.
+     * Don't call this method directly, call {@link #buildView(Activity)} instead
      */
     protected void initState(ACT activity) {
         mIsInitialized = true;
     }
 
     /**
-     * Create new view
+     * Create new view, don't call this method directly, call {@link #buildView(Activity)} instead
      */
     protected abstract View createView(ACT activity);
 

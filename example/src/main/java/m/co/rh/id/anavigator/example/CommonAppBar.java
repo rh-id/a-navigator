@@ -8,19 +8,25 @@ import androidx.appcompat.widget.Toolbar;
 
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.component.INavigator;
+import m.co.rh.id.anavigator.component.RequireNavigator;
 
-public class CommonAppBar extends StatefulView<Activity> {
+public class CommonAppBar extends StatefulView<Activity> implements RequireNavigator {
 
-    private INavigator mNavigator;
+    private transient INavigator mNavigator;
     private String mTitle;
-    private View.OnClickListener mNavigationOnClickListener;
-    private boolean mIsInitialRoute;
+    private transient View.OnClickListener mNavigationOnClickListener;
     private int mBackgroundColor;
+    private boolean mIsInitialRoute;
 
     public CommonAppBar(INavigator navigator) {
         mNavigator = navigator;
-        mIsInitialRoute = navigator.isInitialRoute();
         mBackgroundColor = Color.BLUE;
+        mIsInitialRoute = mNavigator.isInitialRoute();
+    }
+
+    @Override
+    public void provideNavigator(INavigator navigator) {
+        mNavigator = navigator;
     }
 
     @Override

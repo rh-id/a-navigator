@@ -4,7 +4,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.navigation.NavigationView;
@@ -24,18 +26,47 @@ import m.co.rh.id.anavigator.component.RequireNavigator;
 public class HomePage extends StatefulView<Activity> implements RequireNavigator, NavOnBackPressed, NavOnActivityResult {
     private static final int APPCOMPAT_ACTIVITY_REQUEST_CODE = 1;
     private CommonAppBar mCommonAppBar;
-    private INavigator mNavigator;
+    private transient INavigator mNavigator;
+    public boolean isDrawerOpen;
 
     @Override
     public void provideNavigator(INavigator navigator) {
         mNavigator = navigator;
-        mCommonAppBar = new CommonAppBar(navigator);
+        if (mCommonAppBar == null) {
+            mCommonAppBar = new CommonAppBar(navigator);
+        } else {
+            mCommonAppBar.provideNavigator(navigator);
+        }
     }
 
     @Override
     protected View createView(Activity activity) {
         View view = activity.getLayoutInflater().inflate(R.layout.page_home, null, false);
         DrawerLayout drawerLayout = view.findViewById(R.id.drawer);
+        drawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {
+            @Override
+            public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
+                // leave blank
+            }
+
+            @Override
+            public void onDrawerOpened(@NonNull View drawerView) {
+                isDrawerOpen = true;
+            }
+
+            @Override
+            public void onDrawerClosed(@NonNull View drawerView) {
+                isDrawerOpen = false;
+            }
+
+            @Override
+            public void onDrawerStateChanged(int newState) {
+                // leave blank
+            }
+        });
+        if (isDrawerOpen) {
+            drawerLayout.open();
+        }
         NavigationView navigationView = view.findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(item -> {
             switch (item.getItemId()) {
@@ -44,7 +75,8 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
                             new Intent(activity, AppCompatExampleActivity.class), APPCOMPAT_ACTIVITY_REQUEST_CODE);
                     break;
                 case R.id.nav_second:
-                    mNavigator.push(Routes.SECOND_PAGE);
+                    mNavigator.push(Routes.SECOND_PAGE, null, (activity1, currentView, result)
+                            -> Toast.makeText(activity1, "Returned from second page with result: " + result, Toast.LENGTH_SHORT).show());
                     break;
             }
             return false;

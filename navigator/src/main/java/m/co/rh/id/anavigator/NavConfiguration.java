@@ -20,6 +20,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private Map<String, StatefulViewFactory<ACT, SV>> navMap;
     private Animation defaultInAnimation;
     private Animation defaultOutAnimation;
+    private boolean saveStateToSharedPreference;
 
     private NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
         if (initialRouteName == null) {
@@ -48,11 +49,16 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return defaultOutAnimation;
     }
 
+    public boolean isSaveStateToSharedPreference() {
+        return saveStateToSharedPreference;
+    }
+
     public static class Builder<ACT extends Activity, SV extends StatefulView> {
         private String initialRouteName;
         private Map<String, StatefulViewFactory<ACT, SV>> navMap;
         private Animation inAnimation;
         private Animation outAnimation;
+        private boolean saveStateToSharedPreference;
 
         /**
          * @param initialRouteName initial route to be pushed to navigator
@@ -79,6 +85,15 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             return this;
         }
 
+        /**
+         * Enable or disable save and restore state. the states will be stored in shared preferences.
+         * Use SealedObject class instead of default Serializable fields if you need to secure/encrypt them
+         */
+        public Builder setEnableSharedPrefSaveState(boolean enable) {
+            this.saveStateToSharedPreference = enable;
+            return this;
+        }
+
         public NavConfiguration<ACT, SV> build() {
             NavConfiguration<ACT, SV> navConfiguration = new NavConfiguration<>(initialRouteName, navMap);
             if (inAnimation == null) {
@@ -99,7 +114,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             }
             navConfiguration.defaultInAnimation = inAnimation;
             navConfiguration.defaultOutAnimation = outAnimation;
-
+            navConfiguration.saveStateToSharedPreference = saveStateToSharedPreference;
             return navConfiguration;
         }
     }

@@ -3,15 +3,29 @@ package m.co.rh.id.anavigator;
 import android.app.Activity;
 import android.app.Application;
 import android.content.ComponentCallbacks2;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.util.Base64;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ViewAnimator;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.LinkedList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavActivityLifecycle;
@@ -29,10 +43,11 @@ import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
  * @param <ACT> Activity class type
  * @param <SV>  StatefulViewHandler type
  */
-@SuppressWarnings("unchecked")
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class Navigator<ACT extends Activity, SV extends StatefulView> implements Application.ActivityLifecycleCallbacks, ComponentCallbacks2, INavigator {
+    private static final String TAG = "Navigator";
     /**
-     * Key used to retrieve value from Intent data when navigator {@link #pop(Object)} and finishes the activity.
+     * Key used to retrieve value from Intent data when navigator {@link #pop(Serializable)} and finishes the activity.
      * If an activity called startActivityForResult and waiting for result at onActivityResult,
      * use this to retrieve the data (intent.getSerializableExtra(ACTIVITY_RESULT_SERIALIZABLE_KEY))
      */
@@ -45,6 +60,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private int mContainerId;
     private boolean mIsNavigating;
     private LinkedList<Runnable> mPendingNavigatorRoute;
+    private SnapshotHandler mNavSnapshotHandler;
 
     /**
      * @param activityClass activity class that this navigator handles
@@ -58,10 +74,15 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mNavRouteStack = new LinkedList<>();
         mContainerId = Integer.MAX_VALUE;
         mPendingNavigatorRoute = new LinkedList<>();
+        mNavSnapshotHandler = new SnapshotHandler(navConfiguration,
+                "m.co.rh.id.anavigator.Navigator.NavSharedPreference-" +
+                        mActivityClass.getName(),
+                "m.co.rh.id.anavigator.Navigator.NavSharedPreference.StateKey-" +
+                        mActivityClass.getName());
     }
 
     @Override
-    public <POPRESULT extends Object> void push(String routeName, Object args, NavPopCallback<POPRESULT> navPopCallback) {
+    public void push(String routeName, Serializable args, NavPopCallback navPopCallback) {
         if (mIsNavigating) {
             // It is possible that push is invoked somewhere during initState or buildView
             // put this invocation later after previous push is done
@@ -88,6 +109,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
         }
+        mNavSnapshotHandler.saveState(mActivity, mNavRouteStack);
     }
 
     @Override
@@ -101,7 +123,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     @Override
-    public boolean pop(Object result) {
+    public boolean pop(Serializable result) {
         if (mIsNavigating) {
             // if this pop is invoke during initState or buildView or dispose, add to pending
             mPendingNavigatorRoute.add(() -> pop(result));
@@ -112,27 +134,26 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             ViewAnimator existingViewAnimator = mActivity.findViewById(mContainerId);
             View currentView = existingViewAnimator.getCurrentView();
             existingViewAnimator.showPrevious();
-            popStack(result);
+            popStack(existingViewAnimator.getCurrentView(), result);
             existingViewAnimator.removeView(currentView);
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
                 mPendingNavigatorRoute.pop().run();
             }
+            mNavSnapshotHandler.saveState(mActivity, mNavRouteStack);
             return true;
         } else {
+            mPendingNavigatorRoute.clear();
             // pop initial route
             if (mNavRouteStack.size() == 1) {
-                popStack(null);
+                popStack(null, result);
             }
             int activityResult = Activity.RESULT_CANCELED;
             if (result != null) {
                 activityResult = Activity.RESULT_OK;
             }
             setActivityResultAndFinish(activityResult, result);
-        }
-        mIsNavigating = false;
-        if (!mPendingNavigatorRoute.isEmpty()) {
-            mPendingNavigatorRoute.pop().run();
+            mIsNavigating = false;
         }
         return false;
     }
@@ -201,17 +222,16 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 ViewAnimator viewAnimator = mActivity.findViewById(mContainerId);
                 ((NavOnActivityResult) statefulView).onActivityResult(viewAnimator.getCurrentView(),
                         mActivity, this, requestCode, resultCode, data);
-                return;
             }
         }
     }
 
     @Override
     public boolean isInitialRoute() {
-        return mNavRouteStack.size() == 1 ? true : false;
+        return mNavRouteStack.size() == 1;
     }
 
-    private void popStack(Object result) {
+    private void popStack(View currentView, Serializable result) {
         NavRoute currentNavRoute = mNavRouteStack.pop();
         currentNavRoute.setRouteResult(result);
         StatefulView statefulView = currentNavRoute.getStatefulView();
@@ -220,7 +240,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         NavPopCallback navPopCallback = currentNavRoute.getNavPopCallback();
         if (navPopCallback != null) {
-            navPopCallback.onPop(result);
+            navPopCallback.onPop(mActivity, currentView, result);
         }
     }
 
@@ -237,6 +257,18 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             viewAnimator.setOutAnimation(mNavConfiguration.getDefaultOutAnimation());
             viewAnimator.setAnimateFirstView(true);
             mActivity.setContentView(viewAnimator);
+            Serializable routeStack = mNavSnapshotHandler.loadState(activity);
+            if (routeStack != null) {
+                mNavRouteStack = (LinkedList<NavRoute>) routeStack;
+                // re-inject navigator
+                for (NavRoute navRoute : mNavRouteStack) {
+                    StatefulView statefulView = navRoute.getStatefulView();
+                    if (statefulView instanceof RequireNavigator) {
+                        ((RequireNavigator) statefulView).provideNavigator(this);
+                    }
+                }
+                Log.i(TAG, "restored navigator state");
+            }
             if (!mNavRouteStack.isEmpty()) {
                 // re-add all the views
                 for (NavRoute navRoute : mNavRouteStack) {
@@ -290,13 +322,19 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void onActivitySaveInstanceState(Activity activity, Bundle bundle) {
-        // leave empty
+        if (mActivityClass.isInstance(activity)) {
+            mNavSnapshotHandler.saveState(activity, mNavRouteStack);
+        }
     }
 
     @Override
     public void onActivityDestroyed(Activity activity) {
         if (mActivityClass.isInstance(activity)) {
             mActivity = null;
+            if (activity.isFinishing()) {
+                mNavSnapshotHandler.clearState(activity);
+                mNavSnapshotHandler.dispose();
+            }
         }
     }
 
@@ -333,6 +371,115 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                     ((NavComponentCallback) statefulView).onLowMemory();
                 }
             }
+        }
+    }
+}
+
+// save state to SharedPreferences.
+// during Activity.onCreate(bundle), the bundle value seemed to always null,
+// and it haven't been fix until 2020, see https://issuetracker.google.com/issues/37020082
+@SuppressWarnings("rawtypes")
+class SnapshotHandler {
+    private ExecutorService executorService;
+    private Future<Serializable> stateSnapshot;
+    private NavConfiguration navConfiguration;
+    private String sharedPrefName;
+    private String sharedPrefStateKey;
+
+    SnapshotHandler(NavConfiguration navConfiguration, String sharedPrefName, String sharedPrefStateKey) {
+        this.navConfiguration = navConfiguration;
+        this.sharedPrefName = sharedPrefName;
+        this.sharedPrefStateKey = sharedPrefStateKey;
+    }
+
+    void saveState(Activity activity, Serializable serializable) {
+        if (navConfiguration.isSaveStateToSharedPreference()) {
+            stateSnapshot = getExecutorService().submit((Callable<Serializable>) () -> {
+                String snapshot = serializeToString(serializable);
+                if (snapshot == null) {
+                    throw new IllegalStateException("unable to save state, snapshot cant be serialized");
+                }
+                SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
+                sharedPreferences.edit().putString(sharedPrefStateKey, snapshot).commit();
+                return snapshot;
+            });
+        }
+    }
+
+    Serializable loadState(Activity activity) {
+        if (navConfiguration.isSaveStateToSharedPreference()) {
+            if (stateSnapshot != null) {
+                return getState();
+            }
+            stateSnapshot = getExecutorService().submit((Callable<Serializable>) () -> {
+                SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
+                String serializedSnapshot = sharedPreferences.getString(sharedPrefStateKey, null);
+                return deserializeToString(serializedSnapshot);
+            });
+            return getState();
+        }
+        return null;
+    }
+
+    void clearState(Activity activity) {
+        if (stateSnapshot != null) {
+            stateSnapshot.cancel(false);
+            stateSnapshot = null;
+        }
+        getExecutorService().submit(() -> {
+            SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
+            sharedPreferences.edit().clear().commit();
+        });
+    }
+
+    private ExecutorService getExecutorService() {
+        if (executorService == null) {
+            executorService = Executors.newSingleThreadExecutor();
+        }
+        return executorService;
+    }
+
+    private String serializeToString(Serializable serializable) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(serializable);
+        oos.close();
+        baos.close();
+        return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
+    }
+
+    private Serializable deserializeToString(String serializableString) throws IOException, ClassNotFoundException {
+        Serializable result = null;
+        if (serializableString != null) {
+            byte[] base64decodedBytes = Base64.decode(serializableString, Base64.DEFAULT);
+            InputStream in = new ByteArrayInputStream(base64decodedBytes);
+            ObjectInputStream oin = new ObjectInputStream(in);
+            result = (Serializable) oin.readObject();
+            oin.close();
+            in.close();
+        }
+        return result;
+    }
+
+    private Serializable getState() {
+        if (stateSnapshot != null) {
+            try {
+                return stateSnapshot.get();
+            } catch (Exception e) {
+                Log.e("getState", "Unable to get snapshot", e);
+            }
+        }
+        return null;
+    }
+
+    void dispose() {
+        if (executorService != null) {
+            executorService.shutdown();
+            executorService = null;
+        }
+        if (stateSnapshot != null) {
+            stateSnapshot.cancel(false);
+            stateSnapshot = null;
         }
     }
 }

@@ -17,16 +17,16 @@ public interface INavigator {
      * @param navPopCallback callback to handle when this route pop/exit
      * @throws NavigationRouteNotFound if route not found
      */
-    <POPRESULT extends Object> void push(String routeName, Object args, NavPopCallback<POPRESULT> navPopCallback);
+    void push(String routeName, Serializable args, NavPopCallback navPopCallback);
 
     /**
-     * Same as {@link #push(String, Object, NavPopCallback)}
+     * Same as {@link #push(String, Serializable, NavPopCallback)}
      * with NavPopCallback value null
      */
     void push(String routeName, Serializable args);
 
     /**
-     * Same as {@link #push(String, Object, NavPopCallback)}
+     * Same as {@link #push(String, Serializable, NavPopCallback)}
      * with args null and NavPopCallback value null
      */
     void push(String routeName);
@@ -37,25 +37,25 @@ public interface INavigator {
      * If the result is NOT null activity will finish with result Activity.RESULT_OK,
      * otherwise Activity.RESULT_CANCELED.
      * The result will only be set to intent result only if it is Serializable type OR Intent type.
-     * If Serializable, the result will be set as activity result using {@link #ACTIVITY_RESULT_SERIALIZABLE_KEY} as key
+     * If Serializable, the result will be set as activity result using navigator defined key
      * If Intent, result will be set directly as result to activity.
      *
      * @param result result to pass to the callback specified by NavPopCallback
-     *               when push {@link #push(String, Object, NavPopCallback)} to current destination
+     *               when push {@link #push(String, Serializable, NavPopCallback)} to current destination
      * @return true if there are route to pop, false otherwise.
      */
-    boolean pop(Object result);
+    boolean pop(Serializable result);
 
     /**
      * Finish activity with result.
      * The result will only be set to intent result only if it is Serializable type OR Intent type.
-     * If Serializable, the result will be set as activity result using {@link #ACTIVITY_RESULT_SERIALIZABLE_KEY} as key
+     * If Serializable, the result will be set as activity result using navigator defined key
      * If Intent, result will be set directly as result to activity
      */
     void finishActivity(Object result);
 
     /**
-     * Same as {@link #pop(Object)} with null result
+     * Same as {@link #pop(Serializable)} with null result
      */
     boolean pop();
 

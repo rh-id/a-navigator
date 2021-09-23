@@ -18,12 +18,16 @@ import m.co.rh.id.anavigator.component.RequireNavigator;
 public class AppCompatHomePage extends StatefulView<AppCompatActivity> implements RequireNavigator, NavOnBackPressed<AppCompatActivity> {
 
     private CommonAppBar mCommonAppBar;
-    private INavigator mNavigator;
+    private transient INavigator mNavigator;
 
     @Override
     public void provideNavigator(INavigator navigator) {
         mNavigator = navigator;
-        mCommonAppBar = new CommonAppBar(navigator);
+        if (mCommonAppBar == null) {
+            mCommonAppBar = new CommonAppBar(navigator);
+        } else {
+            mCommonAppBar.provideNavigator(navigator);
+        }
     }
 
     @Override
@@ -32,10 +36,8 @@ public class AppCompatHomePage extends StatefulView<AppCompatActivity> implement
         DrawerLayout drawerLayout = view.findViewById(R.id.drawer);
         NavigationView navigationView = view.findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(item -> {
-            switch (item.getItemId()) {
-                case R.id.nav_second:
-                    mNavigator.push(Routes.SECOND_PAGE);
-                    break;
+            if (item.getItemId() == R.id.nav_second) {
+                mNavigator.push(Routes.SECOND_PAGE);
             }
             return false;
         });

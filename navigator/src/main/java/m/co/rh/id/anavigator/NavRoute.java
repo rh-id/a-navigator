@@ -1,16 +1,19 @@
 package m.co.rh.id.anavigator;
 
+import java.io.Serializable;
+
 import m.co.rh.id.anavigator.component.NavPopCallback;
 
-public class NavRoute {
+@SuppressWarnings("rawtypes")
+public class NavRoute implements Serializable {
     private NavPopCallback navPopCallback;
     private StatefulView statefulView;
     private final String routeName;
-    private final Object routeArgs;
+    private final Serializable routeArgs;
     private final String routeStateKey;
-    private Object routeResult;
+    private Serializable routeResult;
 
-    NavRoute(NavPopCallback navPopCallback, StatefulView statefulView, String routeName, Object routeArgs, String routeStateKey) {
+    NavRoute(NavPopCallback navPopCallback, StatefulView statefulView, String routeName, Serializable routeArgs, String routeStateKey) {
         this.navPopCallback = navPopCallback;
         this.statefulView = statefulView;
         this.routeName = routeName;
@@ -63,7 +66,7 @@ public class NavRoute {
         return routeResult;
     }
 
-    void setRouteResult(Object routeResult) {
+    void setRouteResult(Serializable routeResult) {
         this.routeResult = routeResult;
     }
 }
