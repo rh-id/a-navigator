@@ -36,9 +36,10 @@ public class MyApplication extends Application {
         Map<String, StatefulViewFactory<RawActivity, StatefulView<Activity>>> navMap = new HashMap<>();
         navMap.put(Routes.HOME_PAGE, (args, activity) -> new HomePage());
         navMap.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
+        NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilder1 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap);
         NavConfiguration<RawActivity, StatefulView<Activity>> navConfiguration =
-                new NavConfiguration<>(Routes.HOME_PAGE, navMap);
-        Navigator navigator =
+                navBuilder1.build();
+        Navigator<RawActivity, StatefulView<Activity>> navigator =
                 new Navigator<>(RawActivity.class, navConfiguration);
         mRawActivityNavigator = navigator;
         // make sure to register navigator as callbacks to work properly
@@ -50,9 +51,10 @@ public class MyApplication extends Application {
         navMap2.put(Routes.HOME_PAGE, (args, activity) -> new AppCompatHomePage());
         // can be re-used if needed
         navMap2.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
+        NavConfiguration.Builder<AppCompatExampleActivity, StatefulView> navBuilder2 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap2);
         NavConfiguration<AppCompatExampleActivity, StatefulView> navConfiguration2 =
-                new NavConfiguration<>(Routes.HOME_PAGE, navMap2);
-        Navigator navigator2 =
+                navBuilder2.build();
+        Navigator<AppCompatExampleActivity, StatefulView> navigator2 =
                 new Navigator<>(AppCompatExampleActivity.class, navConfiguration2);
         mAppCompatActivityNavigator = navigator2;
         // make sure to register navigator as callbacks to work properly

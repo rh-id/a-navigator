@@ -13,27 +13,15 @@ import java.util.Map;
 
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
 
+
+@SuppressWarnings("rawtypes")
 public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private String initialRouteName;
     private Map<String, StatefulViewFactory<ACT, SV>> navMap;
     private Animation defaultInAnimation;
     private Animation defaultOutAnimation;
 
-    /**
-     * Same as {@link #NavConfiguration(String, Map, Animation, Animation)}
-     * with inAnmation and outAnimation set to null
-     */
-    public NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
-        this(initialRouteName, navMap, null, null);
-    }
-
-    /**
-     * @param initialRouteName initial route to be pushed to navigator
-     * @param navMap           mapping of the routes for this navigator
-     * @param inAnimation      animation used when a view is shown/displayed
-     * @param outAnimation     animation used when a view is hidden/removed from navigator
-     */
-    public NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap, Animation inAnimation, Animation outAnimation) {
+    private NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
         if (initialRouteName == null) {
             throw new IllegalStateException("initial route name must not null!");
         }
@@ -42,25 +30,6 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         }
         this.initialRouteName = initialRouteName;
         this.navMap = navMap;
-
-        defaultInAnimation = inAnimation;
-        if (defaultInAnimation == null) {
-            AnimationSet inAnimationSet = new AnimationSet(true);
-            inAnimationSet.setInterpolator(new DecelerateInterpolator());
-            inAnimationSet.setDuration(300);
-            inAnimationSet.addAnimation(new AlphaAnimation(0, 1));
-            inAnimationSet.addAnimation(new TranslateAnimation(0, 0, 100, 0));
-            defaultInAnimation = inAnimationSet;
-        }
-        defaultOutAnimation = outAnimation;
-        if (defaultOutAnimation == null) {
-            AnimationSet outAnimationSet = new AnimationSet(true);
-            outAnimationSet.setInterpolator(new AccelerateInterpolator());
-            outAnimationSet.setDuration(50);
-            outAnimationSet.addAnimation(new AlphaAnimation(1, 0));
-            outAnimationSet.addAnimation(new TranslateAnimation(0, 0, 0, -100));
-            defaultOutAnimation = outAnimationSet;
-        }
     }
 
     public String getInitialRouteName() {
@@ -77,5 +46,61 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
 
     Animation getDefaultOutAnimation() {
         return defaultOutAnimation;
+    }
+
+    public static class Builder<ACT extends Activity, SV extends StatefulView> {
+        private String initialRouteName;
+        private Map<String, StatefulViewFactory<ACT, SV>> navMap;
+        private Animation inAnimation;
+        private Animation outAnimation;
+
+        /**
+         * @param initialRouteName initial route to be pushed to navigator
+         * @param navMap           mapping of the routes for this navigator
+         */
+        public Builder(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
+            this.initialRouteName = initialRouteName;
+            this.navMap = navMap;
+        }
+
+        /**
+         * animation used when a view is shown/displayed
+         */
+        public Builder setInAnimation(Animation inAnimation) {
+            this.inAnimation = inAnimation;
+            return this;
+        }
+
+        /**
+         * animation used when a view is hidden/removed from navigator
+         */
+        public Builder setOutAnimation(Animation outAnimation) {
+            this.outAnimation = outAnimation;
+            return this;
+        }
+
+        public NavConfiguration<ACT, SV> build() {
+            NavConfiguration<ACT, SV> navConfiguration = new NavConfiguration<>(initialRouteName, navMap);
+            if (inAnimation == null) {
+                AnimationSet inAnimationSet = new AnimationSet(true);
+                inAnimationSet.setInterpolator(new DecelerateInterpolator());
+                inAnimationSet.setDuration(300);
+                inAnimationSet.addAnimation(new AlphaAnimation(0, 1));
+                inAnimationSet.addAnimation(new TranslateAnimation(0, 0, 100, 0));
+                inAnimation = inAnimationSet;
+            }
+            if (outAnimation == null) {
+                AnimationSet outAnimationSet = new AnimationSet(true);
+                outAnimationSet.setInterpolator(new AccelerateInterpolator());
+                outAnimationSet.setDuration(50);
+                outAnimationSet.addAnimation(new AlphaAnimation(1, 0));
+                outAnimationSet.addAnimation(new TranslateAnimation(0, 0, 0, -100));
+                outAnimation = outAnimationSet;
+            }
+            navConfiguration.defaultInAnimation = inAnimation;
+            navConfiguration.defaultOutAnimation = outAnimation;
+
+            return navConfiguration;
+        }
     }
 }
