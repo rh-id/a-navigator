@@ -464,6 +464,10 @@ class SnapshotHandler {
     private Serializable getState() {
         if (stateSnapshot != null) {
             try {
+                // prevent ANR
+                while (!stateSnapshot.isDone()) {
+                    Thread.yield();
+                }
                 return stateSnapshot.get();
             } catch (Exception e) {
                 Log.e("getState", "Unable to get snapshot", e);

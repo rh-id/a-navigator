@@ -27,11 +27,11 @@ allprojects {
 Include this to your module dependency (module build.gradle)
 ```
 dependencies {
-    implementation 'com.github.rh-id:a-navigator:v0.0.1'
+    implementation 'com.github.rh-id:a-navigator:v0.0.2'
 }
 ```
 
-First create a home page by extending `StatefulView` (see example package in example folder)
+Next for code part, create a home page by extending `StatefulView` (see example package in example folder)
 
 ```
 public class HomePage extends StatefulView<Activity> {
@@ -71,8 +71,13 @@ public class MyApplication extends Application {
         navMap.put("/", (args, activity) -> new HomePage());
 
         // make sure to set initial route to home page which is "/"
+        NavConfiguration.Builder<MainActivity, StatefulView<Activity>> navBuilder = new NavConfiguration.Builder<>("/", navMap);
+
+        // set EnableSharedPrefSaveState to true if you want navigator to save its state
+        navBuilder.setEnableSharedPrefSaveState(true);
+
         NavConfiguration<MainActivity, StatefulView<Activity>> navConfiguration =
-                new NavConfiguration<>("/", navMap);
+                navBuilder.build();
         mainActivityNavigator =
                 new Navigator<>(MainActivity.class, navConfiguration);
 
@@ -106,6 +111,28 @@ public class MainActivity extends AppCompatActivity {
                         .getNavigator(MainActivity.this).onBackPressed();
             }
         });
+    }
+}
+```
+
+If you are not extending `AppCompatActivity` you need to configure it like this:
+
+```
+/**
+ * Example to use the framework by extending Activity directly
+ */
+public class MainActivity extends Activity {
+
+    @Override
+    public void onBackPressed() {
+        // this is required to let navigator handle the back button
+        MyApplication.of(this).getNavigator(this).onBackPressed();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // this is required to let navigator handle onActivityResult
+        MyApplication.of(this).getNavigator(this).onActivityResult(requestCode, resultCode, data);
     }
 }
 ```

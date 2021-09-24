@@ -86,8 +86,17 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         }
 
         /**
-         * Enable or disable save and restore state. the states will be stored in shared preferences.
-         * Use SealedObject class instead of default Serializable fields if you need to secure/encrypt them
+         * Enable or disable save and restore state.
+         * the StatefulView states will be stored in shared preferences by relying on java object serialization mechanism.
+         * Use SealedObject class instead of default Serializable fields if you need to secure/encrypt them.
+         * <p>
+         * When app gets killed and re-opened, navigator will handle state restoration,
+         * see https://developer.android.com/topic/libraries/architecture/saving-states
+         * This saving states behave the same as Saved instance state option.
+         * The states will be cleared only when activity is finishing properly.
+         * <p>
+         * NOTE: Make sure you have decent java serialization knowledge before using this.
+         * Saving state can be quiet tricky to handle
          */
         public Builder setEnableSharedPrefSaveState(boolean enable) {
             this.saveStateToSharedPreference = enable;
