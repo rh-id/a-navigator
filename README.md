@@ -27,7 +27,7 @@ allprojects {
 Include this to your module dependency (module build.gradle)
 ```
 dependencies {
-    implementation 'com.github.rh-id:a-navigator:v0.0.2'
+    implementation 'com.github.rh-id:a-navigator:v0.0.1'
 }
 ```
 
