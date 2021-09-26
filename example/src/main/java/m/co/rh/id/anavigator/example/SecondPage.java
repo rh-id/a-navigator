@@ -32,11 +32,11 @@ public class SecondPage extends StatefulView<Activity> implements RequireNavigat
     }
 
     @Override
-    protected View createView(Activity activity) {
-        View view = activity.getLayoutInflater().inflate(R.layout.page_second, null, false);
+    protected View createView(Activity activity, ViewGroup container) {
+        View view = activity.getLayoutInflater().inflate(R.layout.page_second, container, false);
         mCommonAppBar.setTitle(activity.getString(R.string.second_page_title));
         ViewGroup appBar = view.findViewById(R.id.container_app_bar);
-        appBar.addView(mCommonAppBar.buildView(activity));
+        appBar.addView(mCommonAppBar.buildView(activity, appBar));
         TextView textView = view.findViewById(R.id.textview_second);
         textView.setText(activity.getString(R.string.second_page, counter));
         MaterialButton plusButton = view.findViewById(R.id.button_plus);

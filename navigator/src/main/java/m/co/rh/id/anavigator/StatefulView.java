@@ -2,6 +2,7 @@ package m.co.rh.id.anavigator;
 
 import android.app.Activity;
 import android.view.View;
+import android.view.ViewGroup;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -55,23 +56,23 @@ public abstract class StatefulView<ACT extends Activity> implements Serializable
     /**
      * Build new view instance and return it,
      */
-    public final View buildView(ACT activity) {
+    public final View buildView(ACT activity, ViewGroup container) {
         initialize(activity);
-        return createView(activity);
+        return createView(activity, container);
     }
 
     /**
-     * Initialize state. This method will be called once only when {@link #buildView(Activity)} is called.
-     * Don't call this method directly, call {@link #buildView(Activity)} instead
+     * Initialize state. This method will be called once only when {@link #buildView(Activity, ViewGroup)} is called.
+     * Don't call this method directly, call {@link #buildView(Activity, ViewGroup)} instead
      */
     protected void initState(ACT activity) {
         mIsInitialized = true;
     }
 
     /**
-     * Create new view, don't call this method directly, call {@link #buildView(Activity)} instead
+     * Create new view, don't call this method directly, call {@link #buildView(Activity, ViewGroup)} instead
      */
-    protected abstract View createView(ACT activity);
+    protected abstract View createView(ACT activity, ViewGroup container);
 
     private void initialize(ACT activity) {
         if (!mIsInitialized) {

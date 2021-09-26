@@ -40,8 +40,8 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
     }
 
     @Override
-    protected View createView(Activity activity) {
-        View view = activity.getLayoutInflater().inflate(R.layout.page_home, null, false);
+    protected View createView(Activity activity, ViewGroup container) {
+        View view = activity.getLayoutInflater().inflate(R.layout.page_home, container, false);
         DrawerLayout drawerLayout = view.findViewById(R.id.drawer);
         drawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {
             @Override
@@ -69,15 +69,13 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
         }
         NavigationView navigationView = view.findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(item -> {
-            switch (item.getItemId()) {
-                case R.id.nav_home_appcompat:
-                    activity.startActivityForResult(
-                            new Intent(activity, AppCompatExampleActivity.class), APPCOMPAT_ACTIVITY_REQUEST_CODE);
-                    break;
-                case R.id.nav_second:
-                    mNavigator.push(Routes.SECOND_PAGE, null, (activity1, currentView, result)
-                            -> Toast.makeText(activity1, "Returned from second page with result: " + result, Toast.LENGTH_SHORT).show());
-                    break;
+            int itemId = item.getItemId();
+            if (itemId == R.id.nav_home_appcompat) {
+                activity.startActivityForResult(
+                        new Intent(activity, AppCompatExampleActivity.class), APPCOMPAT_ACTIVITY_REQUEST_CODE);
+            } else if (itemId == R.id.nav_second) {
+                mNavigator.push(Routes.SECOND_PAGE, null, (activity1, currentView, result)
+                        -> Toast.makeText(activity1, "Returned from second page with result: " + result, Toast.LENGTH_SHORT).show());
             }
             return false;
         });
@@ -88,7 +86,7 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
             }
         });
         ViewGroup appBarContainer = view.findViewById(R.id.container_app_bar);
-        appBarContainer.addView(mCommonAppBar.buildView(activity));
+        appBarContainer.addView(mCommonAppBar.buildView(activity, appBarContainer));
         return view;
     }
 

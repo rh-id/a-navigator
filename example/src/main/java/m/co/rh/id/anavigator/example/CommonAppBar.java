@@ -3,6 +3,7 @@ package m.co.rh.id.anavigator.example;
 import android.app.Activity;
 import android.graphics.Color;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.appcompat.widget.Toolbar;
 
@@ -30,8 +31,8 @@ public class CommonAppBar extends StatefulView<Activity> implements RequireNavig
     }
 
     @Override
-    protected View createView(Activity activity) {
-        View view = activity.getLayoutInflater().inflate(R.layout.common_app_bar, null, false);
+    protected View createView(Activity activity, ViewGroup container) {
+        View view = activity.getLayoutInflater().inflate(R.layout.common_app_bar, container, false);
         Toolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setTitle(mTitle);
         toolbar.setBackgroundColor(mBackgroundColor);

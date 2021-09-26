@@ -31,8 +31,8 @@ public class AppCompatHomePage extends StatefulView<AppCompatActivity> implement
     }
 
     @Override
-    protected View createView(AppCompatActivity activity) {
-        View view = activity.getLayoutInflater().inflate(R.layout.page_appcompat_home, null, false);
+    protected View createView(AppCompatActivity activity, ViewGroup container) {
+        View view = activity.getLayoutInflater().inflate(R.layout.page_appcompat_home, container, false);
         DrawerLayout drawerLayout = view.findViewById(R.id.drawer);
         NavigationView navigationView = view.findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(item -> {
@@ -49,7 +49,7 @@ public class AppCompatHomePage extends StatefulView<AppCompatActivity> implement
             }
         });
         ViewGroup appBarContainer = view.findViewById(R.id.container_app_bar);
-        appBarContainer.addView(mCommonAppBar.buildView(activity));
+        appBarContainer.addView(mCommonAppBar.buildView(activity, appBarContainer));
         return view;
     }
 

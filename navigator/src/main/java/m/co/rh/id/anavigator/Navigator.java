@@ -22,7 +22,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.LinkedList;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -101,8 +100,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (statefulView instanceof RequireNavigator) {
             ((RequireNavigator) statefulView).provideNavigator(this);
         }
-        View view = statefulView.buildView(mActivity);
         ViewAnimator existingViewAnimator = mActivity.findViewById(mContainerId);
+        View view = statefulView.buildView(mActivity, existingViewAnimator);
         existingViewAnimator.addView(view);
         existingViewAnimator.showNext();
         mIsNavigating = false;
@@ -274,7 +273,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 for (NavRoute navRoute : mNavRouteStack) {
                     viewAnimator.addView(navRoute
                             .getStatefulView()
-                            .buildView(mActivity));
+                            .buildView(mActivity, viewAnimator));
                 }
             } else {
                 push(mNavConfiguration.getInitialRouteName());
@@ -394,7 +393,7 @@ class SnapshotHandler {
 
     void saveState(Activity activity, Serializable serializable) {
         if (navConfiguration.isSaveStateToSharedPreference()) {
-            stateSnapshot = getExecutorService().submit((Callable<Serializable>) () -> {
+            stateSnapshot = getExecutorService().submit(() -> {
                 String snapshot = serializeToString(serializable);
                 if (snapshot == null) {
                     throw new IllegalStateException("unable to save state, snapshot cant be serialized");
@@ -411,7 +410,7 @@ class SnapshotHandler {
             if (stateSnapshot != null) {
                 return getState();
             }
-            stateSnapshot = getExecutorService().submit((Callable<Serializable>) () -> {
+            stateSnapshot = getExecutorService().submit(() -> {
                 SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
                 String serializedSnapshot = sharedPreferences.getString(sharedPrefStateKey, null);
                 return deserializeToString(serializedSnapshot);
