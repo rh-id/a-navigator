@@ -257,7 +257,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             viewAnimator.setAnimateFirstView(true);
             mActivity.setContentView(viewAnimator);
             Serializable routeStack = mNavSnapshotHandler.loadState(activity);
-            if (routeStack != null) {
+            if (routeStack instanceof LinkedList) {
                 mNavRouteStack = (LinkedList<NavRoute>) routeStack;
                 // re-inject navigator
                 for (NavRoute navRoute : mNavRouteStack) {
@@ -400,7 +400,7 @@ class SnapshotHandler {
                 }
                 SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
                 sharedPreferences.edit().putString(sharedPrefStateKey, snapshot).commit();
-                return snapshot;
+                return serializable;
             });
         }
     }
@@ -413,7 +413,7 @@ class SnapshotHandler {
             stateSnapshot = getExecutorService().submit(() -> {
                 SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
                 String serializedSnapshot = sharedPreferences.getString(sharedPrefStateKey, null);
-                return deserializeToString(serializedSnapshot);
+                return deserialize(serializedSnapshot);
             });
             return getState();
         }
@@ -447,7 +447,7 @@ class SnapshotHandler {
         return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
     }
 
-    private Serializable deserializeToString(String serializableString) throws IOException, ClassNotFoundException {
+    private Serializable deserialize(String serializableString) throws IOException, ClassNotFoundException {
         Serializable result = null;
         if (serializableString != null) {
             byte[] base64decodedBytes = Base64.decode(serializableString, Base64.DEFAULT);
