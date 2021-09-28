@@ -10,6 +10,15 @@ import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
 
 public interface INavigator {
     /**
+     * Navigate to anonymous route using StatefulViewFactory.
+     *
+     * @param statefulViewFactory must not null
+     * @param args                arguments to be passed to this route, nullable
+     * @param navPopCallback      callback to handle when this route pop/exit
+     */
+    void push(StatefulViewFactory statefulViewFactory, Serializable args, NavPopCallback navPopCallback);
+
+    /**
      * Navigate to route using route name.
      *
      * @param routeName      route name, must not null
@@ -47,17 +56,17 @@ public interface INavigator {
     boolean pop(Serializable result);
 
     /**
+     * Same as {@link #pop(Serializable)} with null result
+     */
+    boolean pop();
+
+    /**
      * Finish activity with result.
      * The result will only be set to intent result only if it is Serializable type OR Intent type.
      * If Serializable, the result will be set as activity result using navigator defined key
      * If Intent, result will be set directly as result to activity
      */
     void finishActivity(Object result);
-
-    /**
-     * Same as {@link #pop(Serializable)} with null result
-     */
-    boolean pop();
 
     /**
      * @return this navigator nav configuration, for action bar purposes perhaps

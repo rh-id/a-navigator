@@ -81,6 +81,18 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     @Override
+    public void push(StatefulViewFactory statefulViewFactory, Serializable args, NavPopCallback navPopCallback) {
+        if (mIsNavigating) {
+            // It is possible that push is invoked somewhere during initState or buildView
+            // put this invocation later after previous push is done
+            mPendingNavigatorRoute.add(() -> push(statefulViewFactory, args, navPopCallback));
+            return;
+        }
+        mIsNavigating = true;
+        push(statefulViewFactory, null, args, navPopCallback);
+    }
+
+    @Override
     public void push(String routeName, Serializable args, NavPopCallback navPopCallback) {
         if (mIsNavigating) {
             // It is possible that push is invoked somewhere during initState or buildView
@@ -94,7 +106,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mIsNavigating = false;
             throw new NavigationRouteNotFound(routeName + " not found");
         }
-        SV statefulView = statefulViewFactory.newInstance(args, mActivity);
+        push(statefulViewFactory, routeName, args, navPopCallback);
+    }
+
+    private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback) {
+        SV statefulView = (SV) statefulViewFactory.newInstance(args, mActivity);
         // push must be done before initState or buildView so that the statefulView could get route information
         mNavRouteStack.push(new NavRoute(navPopCallback, statefulView, routeName, args, statefulView.getKey()));
         if (statefulView instanceof RequireNavigator) {

@@ -15,6 +15,7 @@
 
     <string name="menu_home_appcompat">Open AppCompat as Activity</string>
     <string name="menu_second">Second Page</string>
+    <string name="menu_second_anonymous">Second Page Anonymous Route</string>
     <string name="welcome_to_home_page">Welcome to home page</string>
     <string name="welcome_to_appcompat_home_page">Welcome to app compat home page</string>
     <string name="return_count_result">Return count result</string>

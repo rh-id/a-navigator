@@ -76,6 +76,9 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
             } else if (itemId == R.id.nav_second) {
                 mNavigator.push(Routes.SECOND_PAGE, null, (activity1, currentView, result)
                         -> Toast.makeText(activity1, "Returned from second page with result: " + result, Toast.LENGTH_SHORT).show());
+            } else if (itemId == R.id.nav_second_anonymous) {
+                mNavigator.push((args, activity1) -> new SecondPage(), null, (activity1, currentView, result)
+                        -> Toast.makeText(activity1, "Returned from second page anonymous route with result: " + result, Toast.LENGTH_SHORT).show());
             }
             return false;
         });

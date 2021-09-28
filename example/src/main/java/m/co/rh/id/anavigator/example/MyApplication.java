@@ -37,6 +37,7 @@ public class MyApplication extends Application {
         navMap.put(Routes.HOME_PAGE, (args, activity) -> new HomePage());
         navMap.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
         NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilder1 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap);
+        //navBuilder1.setEnableSharedPrefSaveState(true);
         NavConfiguration<RawActivity, StatefulView<Activity>> navConfiguration =
                 navBuilder1.build();
         Navigator<RawActivity, StatefulView<Activity>> navigator =
