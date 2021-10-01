@@ -338,7 +338,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     @Override
     public void onActivitySaveInstanceState(Activity activity, Bundle bundle) {
         if (mActivityClass.isInstance(activity)) {
-            mNavSnapshotHandler.saveState(activity, mNavRouteStack);
+            if (!activity.isFinishing()) {
+                mNavSnapshotHandler.saveState(activity, mNavRouteStack);
+            }
         }
     }
 
