@@ -3,9 +3,7 @@ package m.co.rh.id.anavigator;
 import android.app.Activity;
 import android.app.Application;
 import android.content.ComponentCallbacks2;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.util.Base64;
@@ -16,6 +14,9 @@ import android.widget.ViewAnimator;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -73,11 +74,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mNavRouteStack = new LinkedList<>();
         mContainerId = Integer.MAX_VALUE;
         mPendingNavigatorRoute = new LinkedList<>();
-        mNavSnapshotHandler = new SnapshotHandler(navConfiguration,
-                "m.co.rh.id.anavigator.Navigator.NavSharedPreference-" +
-                        mActivityClass.getName(),
-                "m.co.rh.id.anavigator.Navigator.NavSharedPreference.StateKey-" +
-                        mActivityClass.getName());
+        mNavSnapshotHandler = new SnapshotHandler(navConfiguration);
     }
 
     @Override
@@ -134,7 +131,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
         }
-        mNavSnapshotHandler.saveState(mActivity, mNavRouteStack);
+        mNavSnapshotHandler.saveState(mNavRouteStack);
     }
 
     @Override
@@ -165,7 +162,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             if (!mPendingNavigatorRoute.isEmpty()) {
                 mPendingNavigatorRoute.pop().run();
             }
-            mNavSnapshotHandler.saveState(mActivity, mNavRouteStack);
+            mNavSnapshotHandler.saveState(mNavRouteStack);
             return true;
         } else {
             mPendingNavigatorRoute.clear();
@@ -237,7 +234,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
         }
-        mNavSnapshotHandler.saveState(mActivity, mNavRouteStack);
+        mNavSnapshotHandler.saveState(mNavRouteStack);
     }
 
     @Override
@@ -314,7 +311,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             viewAnimator.setOutAnimation(mNavConfiguration.getDefaultOutAnimation());
             viewAnimator.setAnimateFirstView(true);
             mActivity.setContentView(viewAnimator);
-            Serializable routeStack = mNavSnapshotHandler.loadState(activity);
+            Serializable routeStack = mNavSnapshotHandler.loadState();
             if (routeStack instanceof LinkedList) {
                 mNavRouteStack = (LinkedList<NavRoute>) routeStack;
                 // re-inject navigator
@@ -384,7 +381,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     public void onActivitySaveInstanceState(Activity activity, Bundle bundle) {
         if (mActivityClass.isInstance(activity)) {
             if (!activity.isFinishing()) {
-                mNavSnapshotHandler.saveState(activity, mNavRouteStack);
+                mNavSnapshotHandler.saveState(mNavRouteStack);
             }
         }
     }
@@ -394,7 +391,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (mActivityClass.isInstance(activity)) {
             mActivity = null;
             if (activity.isFinishing()) {
-                mNavSnapshotHandler.clearState(activity);
+                mNavSnapshotHandler.clearState();
                 mNavSnapshotHandler.dispose();
             }
         }
@@ -442,63 +439,70 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 // and it haven't been fix until 2020, see https://issuetracker.google.com/issues/37020082
 @SuppressWarnings("rawtypes")
 class SnapshotHandler {
-    private ExecutorService executorService;
-    private Future<Serializable> stateSnapshot;
-    private NavConfiguration navConfiguration;
-    private String sharedPrefName;
-    private String sharedPrefStateKey;
+    private ExecutorService mExecutorService;
+    private Future<Serializable> mStateSnapshot;
+    private File mFile;
 
-    SnapshotHandler(NavConfiguration navConfiguration, String sharedPrefName, String sharedPrefStateKey) {
-        this.navConfiguration = navConfiguration;
-        this.sharedPrefName = sharedPrefName;
-        this.sharedPrefStateKey = sharedPrefStateKey;
+    SnapshotHandler(NavConfiguration navConfiguration) {
+        mFile = navConfiguration.getSaveStateFile();
     }
 
-    void saveState(Activity activity, Serializable serializable) {
-        if (navConfiguration.isSaveStateToSharedPreference()) {
-            stateSnapshot = getExecutorService().submit(() -> {
+    void saveState(Serializable serializable) {
+        if (mFile != null) {
+            mStateSnapshot = getExecutorService().submit(() -> {
                 String snapshot = serializeToString(serializable);
                 if (snapshot == null) {
                     throw new IllegalStateException("unable to save state, snapshot cant be serialized");
                 }
-                SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
-                sharedPreferences.edit().putString(sharedPrefStateKey, snapshot).commit();
+                if (!mFile.exists()) {
+                    mFile.createNewFile();
+                }
+                FileOutputStream fileOutputStream = new FileOutputStream(mFile);
+                fileOutputStream.write(snapshot.getBytes());
+                fileOutputStream.close();
                 return serializable;
             });
         }
     }
 
-    Serializable loadState(Activity activity) {
-        if (navConfiguration.isSaveStateToSharedPreference()) {
-            if (stateSnapshot != null) {
+    Serializable loadState() {
+        if (mFile != null) {
+            if (mStateSnapshot != null) {
                 return getState();
             }
-            stateSnapshot = getExecutorService().submit(() -> {
-                SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
-                String serializedSnapshot = sharedPreferences.getString(sharedPrefStateKey, null);
-                return deserialize(serializedSnapshot);
+            mStateSnapshot = getExecutorService().submit(() -> {
+                if (!mFile.exists()) {
+                    return null;
+                }
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
+                FileInputStream input = new FileInputStream(mFile);
+                byte[] buffer = new byte[2048];
+                int b;
+                while (-1 != (b = input.read(buffer))) {
+                    output.write(buffer, 0, b);
+                }
+                return deserialize(output.toString());
             });
             return getState();
         }
         return null;
     }
 
-    void clearState(Activity activity) {
-        if (stateSnapshot != null) {
-            stateSnapshot.cancel(false);
-            stateSnapshot = null;
+    void clearState() {
+        if (mStateSnapshot != null) {
+            mStateSnapshot.cancel(false);
+            mStateSnapshot = null;
         }
         getExecutorService().submit(() -> {
-            SharedPreferences sharedPreferences = activity.getSharedPreferences(sharedPrefName, Context.MODE_PRIVATE);
-            sharedPreferences.edit().clear().commit();
+            mFile.delete();
         });
     }
 
     private ExecutorService getExecutorService() {
-        if (executorService == null) {
-            executorService = Executors.newSingleThreadExecutor();
+        if (mExecutorService == null) {
+            mExecutorService = Executors.newSingleThreadExecutor();
         }
-        return executorService;
+        return mExecutorService;
     }
 
     private String serializeToString(Serializable serializable) throws IOException {
@@ -524,13 +528,13 @@ class SnapshotHandler {
     }
 
     private Serializable getState() {
-        if (stateSnapshot != null) {
+        if (mStateSnapshot != null) {
             try {
                 // prevent ANR
-                while (!stateSnapshot.isDone()) {
+                while (!mStateSnapshot.isDone()) {
                     Thread.yield();
                 }
-                return stateSnapshot.get();
+                return mStateSnapshot.get();
             } catch (Exception e) {
                 Log.e("getState", "Unable to get snapshot", e);
             }
@@ -539,13 +543,13 @@ class SnapshotHandler {
     }
 
     void dispose() {
-        if (executorService != null) {
-            executorService.shutdown();
-            executorService = null;
+        if (mExecutorService != null) {
+            mExecutorService.shutdown();
+            mExecutorService = null;
         }
-        if (stateSnapshot != null) {
-            stateSnapshot.cancel(false);
-            stateSnapshot = null;
+        if (mStateSnapshot != null) {
+            mStateSnapshot.cancel(false);
+            mStateSnapshot = null;
         }
     }
 }

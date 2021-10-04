@@ -9,6 +9,7 @@ import android.view.animation.AnimationSet;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.TranslateAnimation;
 
+import java.io.File;
 import java.util.Map;
 
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
@@ -20,7 +21,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private Map<String, StatefulViewFactory<ACT, SV>> navMap;
     private Animation defaultInAnimation;
     private Animation defaultOutAnimation;
-    private boolean saveStateToSharedPreference;
+    private File saveStateFile;
 
     private NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
         if (initialRouteName == null) {
@@ -49,8 +50,8 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return defaultOutAnimation;
     }
 
-    public boolean isSaveStateToSharedPreference() {
-        return saveStateToSharedPreference;
+    public File getSaveStateFile() {
+        return saveStateFile;
     }
 
     public static class Builder<ACT extends Activity, SV extends StatefulView> {
@@ -58,7 +59,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         private Map<String, StatefulViewFactory<ACT, SV>> navMap;
         private Animation inAnimation;
         private Animation outAnimation;
-        private boolean saveStateToSharedPreference;
+        private File saveStateFile;
 
         /**
          * @param initialRouteName initial route to be pushed to navigator
@@ -86,8 +87,9 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         }
 
         /**
-         * Enable or disable save and restore state.
-         * the StatefulView states will be stored in shared preferences by relying on java object serialization mechanism.
+         * Provide file to save state, this file will be re-created and deleted as necessary.
+         * <p>
+         * the StatefulView states will be stored in this file by relying on java object serialization mechanism.
          * Use SealedObject class instead of default Serializable fields if you need to secure/encrypt them.
          * <p>
          * When app gets killed and re-opened, navigator will handle state restoration,
@@ -96,10 +98,11 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
          * The states will be cleared only when activity is finishing properly.
          * <p>
          * NOTE: Make sure you have decent java serialization knowledge before using this.
-         * Saving state can be quiet tricky to handle
+         * Saving state can be quiet tricky to handle,
+         * not to mention the states are not encrypted out of the box by this navigator
          */
-        public Builder setEnableSharedPrefSaveState(boolean enable) {
-            this.saveStateToSharedPreference = enable;
+        public Builder setSaveStateFile(File file) {
+            this.saveStateFile = file;
             return this;
         }
 
@@ -123,7 +126,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             }
             navConfiguration.defaultInAnimation = inAnimation;
             navConfiguration.defaultOutAnimation = outAnimation;
-            navConfiguration.saveStateToSharedPreference = saveStateToSharedPreference;
+            navConfiguration.saveStateFile = saveStateFile;
             return navConfiguration;
         }
     }
