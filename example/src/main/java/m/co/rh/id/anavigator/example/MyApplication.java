@@ -34,7 +34,14 @@ public class MyApplication extends Application {
 
         // Prepare navigator for RawActivity
         Map<String, StatefulViewFactory<RawActivity, StatefulView<Activity>>> navMap = new HashMap<>();
-        navMap.put(Routes.HOME_PAGE, (args, activity) -> new HomePage());
+        navMap.put(Routes.HOME_PAGE, (args, activity) -> {
+            if (args instanceof Boolean) {
+                if ((Boolean) args) {
+                    return new HomePage();
+                }
+            }
+            return new SplashPage();
+        });
         navMap.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
         NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilder1 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap);
         //navBuilder1.setEnableSharedPrefSaveState(true);

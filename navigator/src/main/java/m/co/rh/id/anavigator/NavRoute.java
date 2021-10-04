@@ -3,9 +3,11 @@ package m.co.rh.id.anavigator;
 import java.io.Serializable;
 
 import m.co.rh.id.anavigator.component.NavPopCallback;
+import m.co.rh.id.anavigator.component.StatefulViewFactory;
 
 @SuppressWarnings("rawtypes")
 public class NavRoute implements Serializable {
+    private StatefulViewFactory statefulViewFactory;
     private NavPopCallback navPopCallback;
     private StatefulView statefulView;
     private final String routeName;
@@ -13,12 +15,18 @@ public class NavRoute implements Serializable {
     private final String routeStateKey;
     private Serializable routeResult;
 
-    NavRoute(NavPopCallback navPopCallback, StatefulView statefulView, String routeName, Serializable routeArgs, String routeStateKey) {
+    NavRoute(StatefulViewFactory statefulViewFactory,
+             NavPopCallback navPopCallback, StatefulView statefulView, String routeName, Serializable routeArgs, String routeStateKey) {
+        this.statefulViewFactory = statefulViewFactory;
         this.navPopCallback = navPopCallback;
         this.statefulView = statefulView;
         this.routeName = routeName;
         this.routeArgs = routeArgs;
         this.routeStateKey = routeStateKey;
+    }
+
+    StatefulViewFactory getStatefulViewFactory() {
+        return statefulViewFactory;
     }
 
     NavPopCallback getNavPopCallback() {
@@ -48,7 +56,7 @@ public class NavRoute implements Serializable {
     /**
      * Arguments passed for this route
      */
-    public Object getRouteArgs() {
+    public Serializable getRouteArgs() {
         return routeArgs;
     }
 

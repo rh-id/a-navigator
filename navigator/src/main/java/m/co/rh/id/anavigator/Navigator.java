@@ -122,7 +122,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback) {
         SV statefulView = (SV) statefulViewFactory.newInstance(args, mActivity);
         // push must be done before initState or buildView so that the statefulView could get route information
-        mNavRouteStack.push(new NavRoute(navPopCallback, statefulView, routeName, args, statefulView.getKey()));
+        mNavRouteStack.push(new NavRoute(statefulViewFactory, navPopCallback, statefulView, routeName, args, statefulView.getKey()));
         if (statefulView instanceof RequireNavigator) {
             ((RequireNavigator) statefulView).provideNavigator(this);
         }
@@ -212,6 +212,38 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     @Override
     public boolean pop() {
         return pop(null);
+    }
+
+    @Override
+    public void retry(Serializable overrideArgs) {
+        if (mIsNavigating) {
+            mPendingNavigatorRoute.add(() -> retry(overrideArgs));
+            return;
+        }
+        mIsNavigating = true;
+        ViewAnimator existingViewAnimator = mActivity.findViewById(mContainerId);
+        View currentView = existingViewAnimator.getCurrentView();
+        NavRoute currentNavRoute = mNavRouteStack.pop();
+        StatefulView statefulView = currentNavRoute.getStatefulView();
+        if (statefulView != null) {
+            statefulView.dispose(mActivity);
+        }
+        existingViewAnimator.removeView(currentView);
+        push(currentNavRoute.getStatefulViewFactory(),
+                currentNavRoute.getRouteName(),
+                overrideArgs,
+                currentNavRoute.getNavPopCallback());
+        mIsNavigating = false;
+        if (!mPendingNavigatorRoute.isEmpty()) {
+            mPendingNavigatorRoute.pop().run();
+        }
+        mNavSnapshotHandler.saveState(mActivity, mNavRouteStack);
+    }
+
+    @Override
+    public void retry() {
+        NavRoute currentNavRoute = mNavRouteStack.peek();
+        retry(currentNavRoute.getRouteArgs());
     }
 
     @Override

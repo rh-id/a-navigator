@@ -73,6 +73,17 @@ public interface INavigator {
     boolean pop();
 
     /**
+     * Same as {@link #retry()} but override original args with supplied args
+     */
+    void retry(Serializable overrideArgs);
+
+    /**
+     * Retry the same path, basically means pop current route without triggering pop callback
+     * and push the same route with the same args and callback
+     */
+    void retry();
+
+    /**
      * Finish activity with result.
      * The result will only be set to intent result only if it is Serializable type OR Intent type.
      * If Serializable, the result will be set as activity result using navigator defined key
