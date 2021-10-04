@@ -49,7 +49,7 @@ public class SecondPage extends StatefulView<Activity> implements RequireNavigat
                 mNavigator.pop(counter));
         MaterialButton thirdButton = view.findViewById(R.id.button_third);
         thirdButton.setOnClickListener(view1 ->
-                mNavigator.push((args, activity1) -> new ThirdPage(), null, null));
+                mNavigator.push((args, activity1) -> new ThirdPage()));
         return view;
     }
 

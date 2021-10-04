@@ -10,6 +10,18 @@ import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
 
 public interface INavigator {
     /**
+     * Same as {@link #push(StatefulViewFactory, Serializable, NavPopCallback)}
+     * with Serializable and NavPopCallback value null
+     */
+    void push(StatefulViewFactory statefulViewFactory);
+
+    /**
+     * Same as {@link #push(StatefulViewFactory, Serializable, NavPopCallback)}
+     * with NavPopCallback value null
+     */
+    void push(StatefulViewFactory statefulViewFactory, Serializable args);
+
+    /**
      * Navigate to anonymous route using StatefulViewFactory.
      *
      * @param statefulViewFactory must not null

@@ -81,6 +81,16 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     @Override
+    public void push(StatefulViewFactory statefulViewFactory) {
+        push(statefulViewFactory, null, null);
+    }
+
+    @Override
+    public void push(StatefulViewFactory statefulViewFactory, Serializable args) {
+        push(statefulViewFactory, args, null);
+    }
+
+    @Override
     public void push(StatefulViewFactory statefulViewFactory, Serializable args, NavPopCallback navPopCallback) {
         if (mIsNavigating) {
             // It is possible that push is invoked somewhere during initState or buildView
