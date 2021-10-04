@@ -285,12 +285,15 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 Log.i(TAG, "restored navigator state");
             }
             if (!mNavRouteStack.isEmpty()) {
-                // re-add all the views
-                for (NavRoute navRoute : mNavRouteStack) {
+                int last = mNavRouteStack.size() - 1;
+                for (int i = last; i >= 0; i--) {
+                    NavRoute navRoute = mNavRouteStack.get(i);
                     viewAnimator.addView(navRoute
                             .getStatefulView()
-                            .buildView(mActivity, viewAnimator));
+                            .buildView(mActivity, viewAnimator)
+                    );
                 }
+                viewAnimator.setDisplayedChild(last);
             } else {
                 push(mNavConfiguration.getInitialRouteName());
             }
