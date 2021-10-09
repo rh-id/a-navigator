@@ -62,12 +62,12 @@ public class AppCompatHomePage extends StatefulView<AppCompatActivity> implement
     }
 
     @Override
-    public void onBackPressed(View currentView, AppCompatActivity activity, INavigator INavigator) {
+    public void onBackPressed(View currentView, AppCompatActivity activity, INavigator navigator) {
         DrawerLayout drawerLayout = currentView.findViewById(R.id.drawer);
         if (drawerLayout != null && drawerLayout.isOpen()) {
             drawerLayout.close();
         } else {
-            INavigator.finishActivity("This is result from AppCompatHomePage");
+            navigator.finishActivity("This is result from AppCompatHomePage");
         }
     }
 }

@@ -10,6 +10,7 @@
     <string name="third_page_title">Third Page</string>
     <string name="second_page">Second Page Counter: %d</string>
     <string name="appcompat_page">AppCompat Home Page</string>
+    <string name="counter">Counter: %d</string>
     <string name="nav_header_title">Android Studio</string>
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
@@ -22,4 +23,8 @@
     <string name="return_count_result">Return count result</string>
     <string name="add_counter">Add counter</string>
     <string name="open_third_page">Open Third page</string>
+    <string name="home">Home</string>
+    <string name="page_1">Page 1</string>
+    <string name="page_2">Page 2</string>
+    <string name="bottomviewnavigator_page">BottomViewNavigator Page</string>
 </resources>

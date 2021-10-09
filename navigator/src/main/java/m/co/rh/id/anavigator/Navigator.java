@@ -22,7 +22,9 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -32,6 +34,7 @@ import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
+import m.co.rh.id.anavigator.component.NavOnRouteChangedListener;
 import m.co.rh.id.anavigator.component.NavPopCallback;
 import m.co.rh.id.anavigator.component.RequireNavigator;
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
@@ -53,14 +56,16 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
      */
     public static final String ACTIVITY_RESULT_SERIALIZABLE_KEY = "onActivityResult.serializableResult";
 
-    private Class<ACT> mActivityClass;
+    private final Class<ACT> mActivityClass;
     private ACT mActivity;
-    private NavConfiguration<ACT, SV> mNavConfiguration;
+    private final NavConfiguration<ACT, SV> mNavConfiguration;
     private LinkedList<NavRoute> mNavRouteStack;
-    private int mContainerId;
+    private final int mViewAnimatorId;
     private boolean mIsNavigating;
-    private LinkedList<Runnable> mPendingNavigatorRoute;
-    private SnapshotHandler mNavSnapshotHandler;
+    private final LinkedList<Runnable> mPendingNavigatorRoute;
+    private final SnapshotHandler mNavSnapshotHandler;
+    private final List<ViewNavigator> mViewNavigatorList;
+    private final List<NavOnRouteChangedListener> mNavOnRouteChangedListenerList;
 
     /**
      * @param activityClass activity class that this navigator handles
@@ -72,9 +77,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mActivityClass = activityClass;
         mNavConfiguration = navConfiguration;
         mNavRouteStack = new LinkedList<>();
-        mContainerId = Integer.MAX_VALUE;
+        mViewAnimatorId = Integer.MAX_VALUE;
         mPendingNavigatorRoute = new LinkedList<>();
         mNavSnapshotHandler = new SnapshotHandler(navConfiguration);
+        mViewNavigatorList = new ArrayList<>();
+        mNavOnRouteChangedListenerList = new ArrayList<>();
     }
 
     @Override
@@ -118,20 +125,29 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback) {
         SV statefulView = (SV) statefulViewFactory.newInstance(args, mActivity);
+        NavRoute currentRoute = mNavRouteStack.peek();
+        NavRoute newRoute = new NavRoute(statefulViewFactory, navPopCallback, statefulView, routeName, args, statefulView.getKey());
         // push must be done before initState or buildView so that the statefulView could get route information
-        mNavRouteStack.push(new NavRoute(statefulViewFactory, navPopCallback, statefulView, routeName, args, statefulView.getKey()));
+        mNavRouteStack.push(newRoute);
         if (statefulView instanceof RequireNavigator) {
             ((RequireNavigator) statefulView).provideNavigator(this);
         }
-        ViewAnimator existingViewAnimator = mActivity.findViewById(mContainerId);
+        ViewAnimator existingViewAnimator = getViewAnimator();
         View view = statefulView.buildView(mActivity, existingViewAnimator);
         existingViewAnimator.addView(view);
         existingViewAnimator.showNext();
+        // try to init view navigator everytime new route is pushed
+        initViewNavigator();
+        onRouteChanged(currentRoute, newRoute);
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
         }
         mNavSnapshotHandler.saveState(mNavRouteStack);
+    }
+
+    protected ViewAnimator getViewAnimator() {
+        return mActivity.findViewById(mViewAnimatorId);
     }
 
     @Override
@@ -153,9 +169,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         mIsNavigating = true;
         if (mNavRouteStack.size() > 1) {
-            ViewAnimator existingViewAnimator = mActivity.findViewById(mContainerId);
+            ViewAnimator existingViewAnimator = getViewAnimator();
             View currentView = existingViewAnimator.getCurrentView();
             existingViewAnimator.showPrevious();
+            // Try reset view navigator before pop
+            resetViewNavigator(currentView);
+            // cont pop
             popStack(existingViewAnimator.getCurrentView(), result);
             existingViewAnimator.removeView(currentView);
             mIsNavigating = false;
@@ -165,11 +184,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mNavSnapshotHandler.saveState(mNavRouteStack);
             return true;
         } else {
-            mPendingNavigatorRoute.clear();
-            // pop initial route
-            if (mNavRouteStack.size() == 1) {
-                popStack(null, result);
-            }
+            // Try reset view navigator before pop
+            ViewAnimator existingViewAnimator = getViewAnimator();
+            resetViewNavigator(existingViewAnimator.getCurrentView());
+            // cont pop
+            popInitialRoute(result);
             int activityResult = Activity.RESULT_CANCELED;
             if (result != null) {
                 activityResult = Activity.RESULT_OK;
@@ -190,6 +209,29 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mPendingNavigatorRoute.clear();
         mIsNavigating = false;
         setActivityResultAndFinish(Activity.RESULT_OK, result);
+    }
+
+    @Override
+    public void addOnRouteChangedListener(NavOnRouteChangedListener navOnRouteChangedListener) {
+        mNavOnRouteChangedListenerList.add(navOnRouteChangedListener);
+    }
+
+    @Override
+    public void removeOnRouteChangedListener(NavOnRouteChangedListener navOnRouteChangedListener) {
+        mNavOnRouteChangedListenerList.remove(navOnRouteChangedListener);
+    }
+
+    protected void removeAllOnRouteChangedListener() {
+        mNavOnRouteChangedListenerList.clear();
+    }
+
+    private void onRouteChanged(NavRoute previous, NavRoute destination) {
+        if (!mNavOnRouteChangedListenerList.isEmpty()) {
+            for (NavOnRouteChangedListener navOnRouteChangedListener
+                    : mNavOnRouteChangedListenerList) {
+                navOnRouteChangedListener.onChanged(previous, destination);
+            }
+        }
     }
 
     private void setActivityResultAndFinish(Integer activityResult, Object result) {
@@ -218,7 +260,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             return;
         }
         mIsNavigating = true;
-        ViewAnimator existingViewAnimator = mActivity.findViewById(mContainerId);
+        ViewAnimator existingViewAnimator = getViewAnimator();
         View currentView = existingViewAnimator.getCurrentView();
         NavRoute currentNavRoute = mNavRouteStack.pop();
         StatefulView statefulView = currentNavRoute.getStatefulView();
@@ -244,6 +286,26 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     @Override
+    public void createViewNavigator(NavConfiguration navConfiguration, int viewGroupContainerId) {
+        ViewNavigator viewNavigator = new ViewNavigator(mActivityClass, navConfiguration, viewGroupContainerId);
+        mViewNavigatorList.add(viewNavigator);
+    }
+
+    @Override
+    public INavigator findViewNavigator(int viewGroupContainerId) {
+        if (!mViewNavigatorList.isEmpty()) {
+            for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                if (viewNavigator.getViewGroupContainerId() ==
+                        viewGroupContainerId) {
+                    return viewNavigator;
+                }
+            }
+        }
+        return null;
+    }
+
+
+    @Override
     public NavConfiguration getNavConfiguration() {
         return mNavConfiguration;
     }
@@ -258,7 +320,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mNavRouteStack.isEmpty()) {
             StatefulView statefulView = mNavRouteStack.peek().getStatefulView();
             if (statefulView instanceof NavOnBackPressed) {
-                ViewAnimator viewAnimator = mActivity.findViewById(mContainerId);
+                ViewAnimator viewAnimator = getViewAnimator();
                 ((NavOnBackPressed) statefulView).onBackPressed(viewAnimator.getCurrentView(),
                         mActivity, this);
                 return;
@@ -273,7 +335,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mNavRouteStack.isEmpty()) {
             StatefulView statefulView = mNavRouteStack.peek().getStatefulView();
             if (statefulView instanceof NavOnActivityResult) {
-                ViewAnimator viewAnimator = mActivity.findViewById(mContainerId);
+                ViewAnimator viewAnimator = getViewAnimator();
                 ((NavOnActivityResult) statefulView).onActivityResult(viewAnimator.getCurrentView(),
                         mActivity, this, requestCode, resultCode, data);
             }
@@ -296,45 +358,106 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (navPopCallback != null) {
             navPopCallback.onPop(mActivity, currentView, result);
         }
+        onRouteChanged(currentNavRoute, mNavRouteStack.peek());
+    }
+
+    protected void popInitialRoute(Serializable result) {
+        // pop initial route
+        mPendingNavigatorRoute.clear();
+        if (mNavRouteStack.size() == 1) {
+            popStack(null, result);
+        }
+    }
+
+    protected ViewAnimator createViewAnimator(ACT activity, int viewAnimatorId, NavConfiguration navConfiguration) {
+        ViewAnimator viewAnimator = new ViewAnimator(activity);
+        viewAnimator.setId(viewAnimatorId);
+        viewAnimator.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        viewAnimator.setInAnimation(navConfiguration.getDefaultInAnimation());
+        viewAnimator.setOutAnimation(navConfiguration.getDefaultOutAnimation());
+        viewAnimator.setAnimateFirstView(true);
+        return viewAnimator;
+    }
+
+    protected void setViewAnimator(ACT activity, ViewAnimator viewAnimator) {
+        activity.setContentView(viewAnimator);
+    }
+
+    protected void initNavigatorState(ViewAnimator viewAnimator) {
+        Serializable routeStack = mNavSnapshotHandler.loadState();
+        if (routeStack instanceof LinkedList) {
+            mNavRouteStack = (LinkedList<NavRoute>) routeStack;
+            // re-inject navigator
+            for (NavRoute navRoute : mNavRouteStack) {
+                StatefulView statefulView = navRoute.getStatefulView();
+                if (statefulView instanceof RequireNavigator) {
+                    ((RequireNavigator) statefulView).provideNavigator(this);
+                }
+            }
+            Log.i(TAG, "restored navigator state");
+        }
+        if (!mNavRouteStack.isEmpty()) {
+            int last = mNavRouteStack.size() - 1;
+            for (int i = last; i >= 0; i--) {
+                NavRoute navRoute = mNavRouteStack.get(i);
+                viewAnimator.addView(navRoute
+                        .getStatefulView()
+                        .buildView(mActivity, viewAnimator)
+                );
+            }
+            viewAnimator.setDisplayedChild(last);
+        } else {
+            push(mNavConfiguration.getInitialRouteName());
+        }
+    }
+
+    protected Class<ACT> getActivityClass() {
+        return mActivityClass;
+    }
+
+    protected int getViewAnimatorId() {
+        return mViewAnimatorId;
+    }
+
+    private void initViewNavigator() {
+        if (!mViewNavigatorList.isEmpty()) {
+            for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                viewNavigator.initViewAnimator();
+            }
+        }
+    }
+
+    private void resetViewNavigator(View currentView) {
+        if (!mViewNavigatorList.isEmpty()) {
+            for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                viewNavigator.tryReset(currentView);
+            }
+        }
+    }
+
+    protected void initViewAnimator() {
+        ViewAnimator viewAnimator = createViewAnimator(mActivity, mViewAnimatorId,
+                mNavConfiguration);
+        setViewAnimator(mActivity, viewAnimator);
+        initNavigatorState(viewAnimator);
+    }
+
+    protected ACT getActivity() {
+        return mActivity;
     }
 
     @Override
     public void onActivityCreated(Activity activity, Bundle bundle) {
         if (mActivityClass.isInstance(activity)) {
             mActivity = (ACT) activity;
-            ViewAnimator viewAnimator = new ViewAnimator(mActivity);
-            viewAnimator.setId(mContainerId);
-            viewAnimator.setLayoutParams(new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT));
-            viewAnimator.setInAnimation(mNavConfiguration.getDefaultInAnimation());
-            viewAnimator.setOutAnimation(mNavConfiguration.getDefaultOutAnimation());
-            viewAnimator.setAnimateFirstView(true);
-            mActivity.setContentView(viewAnimator);
-            Serializable routeStack = mNavSnapshotHandler.loadState();
-            if (routeStack instanceof LinkedList) {
-                mNavRouteStack = (LinkedList<NavRoute>) routeStack;
-                // re-inject navigator
-                for (NavRoute navRoute : mNavRouteStack) {
-                    StatefulView statefulView = navRoute.getStatefulView();
-                    if (statefulView instanceof RequireNavigator) {
-                        ((RequireNavigator) statefulView).provideNavigator(this);
-                    }
-                }
-                Log.i(TAG, "restored navigator state");
-            }
-            if (!mNavRouteStack.isEmpty()) {
-                int last = mNavRouteStack.size() - 1;
-                for (int i = last; i >= 0; i--) {
-                    NavRoute navRoute = mNavRouteStack.get(i);
-                    viewAnimator.addView(navRoute
-                            .getStatefulView()
-                            .buildView(mActivity, viewAnimator)
-                    );
-                }
-                viewAnimator.setDisplayedChild(last);
-            } else {
-                push(mNavConfiguration.getInitialRouteName());
+            initViewAnimator();
+        }
+        // handle view navigator
+        if (!mViewNavigatorList.isEmpty()) {
+            for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                viewNavigator.onActivityCreated(activity, bundle);
             }
         }
     }
@@ -355,6 +478,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                     }
                 }
             }
+            // handle view navigator
+            if (!mViewNavigatorList.isEmpty()) {
+                for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                    viewNavigator.onActivityResumed(activity);
+                }
+            }
         }
     }
 
@@ -367,6 +496,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                     if (statefulView instanceof NavActivityLifecycle) {
                         ((NavActivityLifecycle) statefulView).onPause(mActivity);
                     }
+                }
+            }
+            // handle view navigator
+            if (!mViewNavigatorList.isEmpty()) {
+                for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                    viewNavigator.onActivityPaused(activity);
                 }
             }
         }
@@ -383,17 +518,29 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             if (!activity.isFinishing()) {
                 mNavSnapshotHandler.saveState(mNavRouteStack);
             }
+            // handle view navigator
+            if (!mViewNavigatorList.isEmpty()) {
+                for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                    viewNavigator.onActivitySaveInstanceState(activity, bundle);
+                }
+            }
         }
     }
 
     @Override
     public void onActivityDestroyed(Activity activity) {
         if (mActivityClass.isInstance(activity)) {
-            mActivity = null;
             if (activity.isFinishing()) {
                 mNavSnapshotHandler.clearState();
                 mNavSnapshotHandler.dispose();
             }
+            // handle view navigator
+            if (!mViewNavigatorList.isEmpty()) {
+                for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                    viewNavigator.onActivityDestroyed(activity);
+                }
+            }
+            mActivity = null;
         }
     }
 
@@ -405,6 +552,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 if (statefulView instanceof NavComponentCallback) {
                     ((NavComponentCallback) statefulView).onTrimMemory(flag);
                 }
+            }
+        }
+        // handle view navigator
+        if (!mViewNavigatorList.isEmpty()) {
+            for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                viewNavigator.onTrimMemory(flag);
             }
         }
     }
@@ -419,6 +572,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 }
             }
         }
+        // handle view navigator
+        if (!mViewNavigatorList.isEmpty()) {
+            for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                viewNavigator.onConfigurationChanged(configuration);
+            }
+        }
     }
 
     @Override
@@ -429,6 +588,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 if (statefulView instanceof NavComponentCallback) {
                     ((NavComponentCallback) statefulView).onLowMemory();
                 }
+            }
+        }
+        // handle view navigator
+        if (!mViewNavigatorList.isEmpty()) {
+            for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                viewNavigator.onLowMemory();
             }
         }
     }

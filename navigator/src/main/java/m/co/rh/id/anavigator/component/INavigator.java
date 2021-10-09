@@ -92,6 +92,42 @@ public interface INavigator {
     void finishActivity(Object result);
 
     /**
+     * Add callback listener to listen to changing route pop and push.
+     * The callback will be triggered after pop or push had happened
+     */
+    void addOnRouteChangedListener(NavOnRouteChangedListener navOnRouteChangedListener);
+
+    /**
+     * Remove the OnRouteChangedListener callback
+     */
+    void removeOnRouteChangedListener(NavOnRouteChangedListener navOnRouteChangedListener);
+
+    /**
+     * Create and register view navigator.
+     * Based on supplied "viewGroupContainerId", navigator will be initialized when it found this ID.
+     * Due to Activity lifecycle dependency,
+     * You need to setup and call this during Application creation
+     * <p>
+     * NOTE: The resulting navigator will not receive
+     * onBackPressed and onActivityResult event.
+     * <p>
+     * Pop behaviour will be different,
+     * if ViewNavigator reaches initial route, it won't finish activity
+     *
+     * @param navConfiguration     nav configuration for this navigator
+     * @param viewGroupContainerId container ID for this navigator,
+     *                             make sure its ID is unique across whole app
+     */
+    void createViewNavigator(NavConfiguration navConfiguration, int viewGroupContainerId);
+
+    /**
+     * Find view navigator registered using {@link #createViewNavigator(NavConfiguration, int)}
+     *
+     * @param viewGroupContainerId unique container ID that was registered
+     */
+    INavigator findViewNavigator(int viewGroupContainerId);
+
+    /**
      * @return this navigator nav configuration, for action bar purposes perhaps
      */
     NavConfiguration getNavConfiguration();

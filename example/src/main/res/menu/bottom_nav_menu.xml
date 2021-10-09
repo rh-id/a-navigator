@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_nav_home"
+        android:icon="@drawable/ic_home_white"
+        android:title="@string/home" />
+
+    <item
+        android:id="@+id/menu_nav_bottom_page1"
+        android:icon="@drawable/ic_menu_camera"
+        android:title="@string/page_1" />
+
+    <item
+        android:id="@+id/menu_nav_bottom_page2"
+        android:icon="@drawable/ic_menu_camera"
+        android:title="@string/page_2" />
+</menu>

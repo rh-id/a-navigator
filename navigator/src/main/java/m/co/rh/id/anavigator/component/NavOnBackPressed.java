@@ -13,7 +13,7 @@ public interface NavOnBackPressed<ACT extends Activity> {
      *
      * @param currentView current view of the StatefulView
      * @param activity    current activity
-     * @param INavigator  current instance of the navigator
+     * @param navigator   current instance of the navigator
      */
-    void onBackPressed(View currentView, ACT activity, INavigator INavigator);
+    void onBackPressed(View currentView, ACT activity, INavigator navigator);
 }

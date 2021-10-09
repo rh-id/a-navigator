@@ -7,9 +7,9 @@ import m.co.rh.id.anavigator.component.StatefulViewFactory;
 
 @SuppressWarnings("rawtypes")
 public class NavRoute implements Serializable {
-    private StatefulViewFactory statefulViewFactory;
-    private NavPopCallback navPopCallback;
-    private StatefulView statefulView;
+    private final StatefulViewFactory statefulViewFactory;
+    private final NavPopCallback navPopCallback;
+    private final StatefulView statefulView;
     private final String routeName;
     private final Serializable routeArgs;
     private final String routeStateKey;
@@ -31,14 +31,6 @@ public class NavRoute implements Serializable {
 
     NavPopCallback getNavPopCallback() {
         return navPopCallback;
-    }
-
-    void setNavPopCallback(NavPopCallback navPopCallback) {
-        this.navPopCallback = navPopCallback;
-    }
-
-    void setStatefulViewHandler(StatefulView statefulView) {
-        this.statefulView = statefulView;
     }
 
     StatefulView getStatefulView() {

@@ -79,6 +79,8 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
             } else if (itemId == R.id.nav_second_anonymous) {
                 mNavigator.push((args, activity1) -> new SecondPage(), null, (activity1, currentView, result)
                         -> Toast.makeText(activity1, "Returned from second page anonymous route with result: " + result, Toast.LENGTH_SHORT).show());
+            } else if (itemId == R.id.nav_bottom_home) {
+                mNavigator.push(Routes.BOTTOM_NAV_PAGE);
             }
             return false;
         });
@@ -102,12 +104,12 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
     }
 
     @Override
-    public void onBackPressed(View currentView, Activity activity, INavigator INavigator) {
+    public void onBackPressed(View currentView, Activity activity, INavigator navigator) {
         DrawerLayout drawerLayout = currentView.findViewById(R.id.drawer);
         if (drawerLayout != null && drawerLayout.isOpen()) {
             drawerLayout.close();
         } else {
-            INavigator.pop();
+            navigator.pop();
         }
     }
 

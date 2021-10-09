@@ -13,6 +13,10 @@ import m.co.rh.id.anavigator.Navigator;
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
+import m.co.rh.id.anavigator.example.bottomnavpage.Bottom1Page;
+import m.co.rh.id.anavigator.example.bottomnavpage.Bottom2Page;
+import m.co.rh.id.anavigator.example.bottomnavpage.BottomHomePage;
+import m.co.rh.id.anavigator.example.bottomnavpage.BottomNavHomePage;
 
 public class MyApplication extends Application {
 
@@ -44,6 +48,7 @@ public class MyApplication extends Application {
             return new SplashPage();
         });
         navMap.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
+        navMap.put(Routes.BOTTOM_NAV_PAGE, (args, activity) -> new BottomNavHomePage());
         NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilder1 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap);
         navBuilder1.setSaveStateFile(new File(getCacheDir(), "navigator1State"));
 
@@ -51,6 +56,16 @@ public class MyApplication extends Application {
                 navBuilder1.build();
         Navigator<RawActivity, StatefulView<Activity>> navigator =
                 new Navigator<>(RawActivity.class, navConfiguration);
+        // setup bottom nav pages
+        Map<String, StatefulViewFactory<RawActivity, StatefulView<Activity>>> bottomPageMap = new HashMap<>();
+        bottomPageMap.put(Routes.HOME_PAGE, (args, activity) -> new BottomHomePage());
+        bottomPageMap.put(Routes.PAGE_1, (args, activity) -> new Bottom1Page());
+        bottomPageMap.put(Routes.PAGE_2, (args, activity) -> new Bottom2Page());
+        NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilderBottom = new NavConfiguration.Builder<>(Routes.HOME_PAGE, bottomPageMap);
+        navBuilderBottom.setSaveStateFile(new File(getCacheDir(), "navigatorBottomState"));
+        navigator.createViewNavigator(navBuilderBottom.build(), R.id.unique_container1);
+
+
         mRawActivityNavigator = navigator;
         // make sure to register navigator as callbacks to work properly
         registerActivityLifecycleCallbacks(navigator);

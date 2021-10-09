@@ -7,8 +7,10 @@ In MVVM pattern, ViewModel hold the state and "glue" both UI and business logic,
 In MSV pattern, StatefulView hold state, "glue", View creation, and Lifecycle when necessary.
 
 To put it simply, imagine Fragment and ViewModel as one component, a fragment that hold its state AND with an easy to use navigator.
-One navigator controls one activity, there are no nested navigator.
-If you have different navigation flow, create new activity class with new navigator for it and use `startActivityForResult` to interact between activities
+One navigator controls one activity.
+
+Nested navigator supported through `INavigator.createViewNavigator`.
+you will need to have one navigator as root and setup view navigator by calling that method
 
 ## Example Usage
 
@@ -73,8 +75,8 @@ public class MyApplication extends Application {
         // make sure to set initial route to home page which is "/"
         NavConfiguration.Builder<MainActivity, StatefulView<Activity>> navBuilder = new NavConfiguration.Builder<>("/", navMap);
 
-        // set EnableSharedPrefSaveState to true if you want navigator to save its state
-        navBuilder.setEnableSharedPrefSaveState(true);
+        // set File to save state if you want navigator to save its state
+        navBuilder.setSaveStateFile(new File(getCacheDir(), "navigator1State"));
 
         NavConfiguration<MainActivity, StatefulView<Activity>> navConfiguration =
                 navBuilder.build();
@@ -84,6 +86,17 @@ public class MyApplication extends Application {
         // make sure to register navigator as callbacks to work properly
         registerActivityLifecycleCallbacks(mainActivityNavigator);
         registerComponentCallbacks(mainActivityNavigator);
+
+        // Extra example setup if you have nested navigator, for example when using bottom navigation
+        Map<String, StatefulViewFactory<RawActivity, StatefulView<Activity>>> bottomPageMap = new HashMap<>();
+        bottomPageMap.put("/", (args, activity) -> new BottomHomePage());
+        bottomPageMap.put("/page1", (args, activity) -> new Bottom1Page());
+        bottomPageMap.put("/page2", (args, activity) -> new Bottom2Page());
+        NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilderBottom = new NavConfiguration.Builder<>("/", bottomPageMap);
+        // you could also enable save state for this nested/view navigator
+        navBuilderBottom.setSaveStateFile(new File(getCacheDir(), "navigatorBottomState"));
+        navigator.createViewNavigator(navBuilderBottom.build(), R.id.unique_container1);
+
     }
 
     public Navigator
