@@ -6,6 +6,7 @@ import java.io.Serializable;
 
 import m.co.rh.id.anavigator.NavConfiguration;
 import m.co.rh.id.anavigator.NavRoute;
+import m.co.rh.id.anavigator.RouteOptions;
 import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
 
 public interface INavigator {
@@ -28,7 +29,8 @@ public interface INavigator {
     void push(StatefulViewFactory statefulViewFactory, NavPopCallback navPopCallback);
 
     /**
-     * Navigate to anonymous route using StatefulViewFactory.
+     * Same as {@link #push(StatefulViewFactory, Serializable, NavPopCallback, RouteOptions)}
+     * with RouteOptions value null
      *
      * @param statefulViewFactory must not null
      * @param args                arguments to be passed to this route, nullable
@@ -37,30 +39,47 @@ public interface INavigator {
     void push(StatefulViewFactory statefulViewFactory, Serializable args, NavPopCallback navPopCallback);
 
     /**
+     * Navigate to anonymous route using StatefulViewFactory.
+     *
+     * @param statefulViewFactory must not null
+     * @param args                arguments to be passed to this route, nullable
+     * @param navPopCallback      callback to handle when this route pop/exit
+     * @param routeOptions        routeOptions to use for this route
+     */
+    void push(StatefulViewFactory statefulViewFactory, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions);
+
+    /**
      * Navigate to route using route name.
      *
      * @param routeName      route name, must not null
      * @param args           arguments to be passed to this route, nullable
      * @param navPopCallback callback to handle when this route pop/exit
+     * @param routeOptions   routeOptions to use for this route
      * @throws NavigationRouteNotFound if route not found
+     */
+    void push(String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions);
+
+    /**
+     * Same as {@link #push(String, Serializable, NavPopCallback, RouteOptions)}
+     * with RouteOptions value null
      */
     void push(String routeName, Serializable args, NavPopCallback navPopCallback);
 
     /**
-     * Same as {@link #push(String, Serializable, NavPopCallback)}
-     * with args value null
+     * Same as {@link #push(String, Serializable, NavPopCallback, RouteOptions)}
+     * with args value null and RouteOptions value null
      */
     void push(String routeName, NavPopCallback navPopCallback);
 
     /**
-     * Same as {@link #push(String, Serializable, NavPopCallback)}
-     * with NavPopCallback value null
+     * Same as {@link #push(String, Serializable, NavPopCallback, RouteOptions)}
+     * with NavPopCallback value null and RouteOptions value null
      */
     void push(String routeName, Serializable args);
 
     /**
-     * Same as {@link #push(String, Serializable, NavPopCallback)}
-     * with args value null and NavPopCallback value null
+     * Same as {@link #push(String, Serializable, NavPopCallback, RouteOptions)}
+     * with args value null, NavPopCallback value null, and RouteOptions value null
      */
     void push(String routeName);
 
@@ -74,7 +93,7 @@ public interface INavigator {
      * If Intent, result will be set directly as result to activity.
      *
      * @param result result to pass to the callback specified by NavPopCallback
-     *               when push {@link #push(String, Serializable, NavPopCallback)} to current destination
+     *               when push {@link #push(String, Serializable, NavPopCallback, RouteOptions)} to current destination
      * @return true if there are route to pop, false otherwise.
      */
     boolean pop(Serializable result);

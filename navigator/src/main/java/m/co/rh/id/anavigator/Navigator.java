@@ -10,6 +10,8 @@ import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ViewAnimator;
 
 import java.io.ByteArrayInputStream;
@@ -101,6 +103,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void push(StatefulViewFactory statefulViewFactory, Serializable args, NavPopCallback navPopCallback) {
+        push(statefulViewFactory, args, navPopCallback, null);
+    }
+
+    @Override
+    public void push(StatefulViewFactory statefulViewFactory, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
         if (mIsNavigating) {
             // It is possible that push is invoked somewhere during initState or buildView
             // put this invocation later after previous push is done
@@ -108,11 +115,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             return;
         }
         mIsNavigating = true;
-        push(statefulViewFactory, null, args, navPopCallback);
+        push(statefulViewFactory, null, args, navPopCallback, routeOptions);
     }
 
     @Override
-    public void push(String routeName, Serializable args, NavPopCallback navPopCallback) {
+    public void push(String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
         if (mIsNavigating) {
             // It is possible that push is invoked somewhere during initState or buildView
             // put this invocation later after previous push is done
@@ -125,7 +132,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mIsNavigating = false;
             throw new NavigationRouteNotFound(routeName + " not found");
         }
-        push(statefulViewFactory, routeName, args, navPopCallback);
+        push(statefulViewFactory, routeName, args, navPopCallback, routeOptions);
+    }
+
+    @Override
+    public void push(String routeName, Serializable args, NavPopCallback navPopCallback) {
+        push(routeName, args, navPopCallback, null);
     }
 
     @Override
@@ -133,19 +145,25 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         push(routeName, null, navPopCallback);
     }
 
-    private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback) {
+    private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
         SV statefulView = (SV) statefulViewFactory.newInstance(args, mActivity);
         NavRoute currentRoute = mNavRouteStack.peek();
-        NavRoute newRoute = new NavRoute(statefulViewFactory, navPopCallback, statefulView, routeName, args, statefulView.getKey());
+        NavRoute newRoute = new NavRoute(statefulViewFactory, navPopCallback, routeOptions, statefulView, routeName, args, statefulView.getKey());
         // push must be done before initState or buildView so that the statefulView could get route information
         mNavRouteStack.push(newRoute);
         if (statefulView instanceof RequireNavigator) {
             ((RequireNavigator) statefulView).provideNavigator(this);
         }
         ViewAnimator existingViewAnimator = getViewAnimator();
+        if (routeOptions != null) {
+            setupRouteOptions(routeOptions, existingViewAnimator);
+        }
         View view = statefulView.buildView(mActivity, existingViewAnimator);
         existingViewAnimator.addView(view);
         existingViewAnimator.showNext();
+        if (routeOptions != null) {
+            resetViewAnimator(existingViewAnimator);
+        }
         // try to init view navigator everytime new route is pushed
         initViewNavigator();
         onRouteChanged(currentRoute, newRoute);
@@ -180,6 +198,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mIsNavigating = true;
         if (mNavRouteStack.size() > 1) {
             ViewAnimator existingViewAnimator = getViewAnimator();
+            // check for route options
+            NavRoute currentNavRoute = mNavRouteStack.peek();
+            RouteOptions routeOptions = currentNavRoute.getRouteOptions();
+            if (routeOptions != null) {
+                setupRouteOptions(routeOptions, existingViewAnimator);
+            }
             View currentView = existingViewAnimator.getCurrentView();
             existingViewAnimator.showPrevious();
             // Try reset view navigator before pop
@@ -187,6 +211,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             // cont pop
             popStack(existingViewAnimator.getCurrentView(), result);
             existingViewAnimator.removeView(currentView);
+            if (routeOptions != null) {
+                resetViewAnimator(existingViewAnimator);
+            }
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
                 mPendingNavigatorRoute.pop().run();
@@ -281,7 +308,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         push(currentNavRoute.getStatefulViewFactory(),
                 currentNavRoute.getRouteName(),
                 overrideArgs,
-                currentNavRoute.getNavPopCallback());
+                currentNavRoute.getNavPopCallback(),
+                null);
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
@@ -421,6 +449,35 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         } else {
             push(mNavConfiguration.getInitialRouteName());
         }
+    }
+
+    private void resetViewAnimator(ViewAnimator existingViewAnimator) {
+        // reset animator
+        existingViewAnimator.setInAnimation(mNavConfiguration.getDefaultInAnimation());
+        existingViewAnimator.setOutAnimation(mNavConfiguration.getDefaultOutAnimation());
+    }
+
+    private void setupRouteOptions(RouteOptions routeOptions, ViewAnimator existingViewAnimator) {
+        Animation inAnimation = null;
+        if (routeOptions.getInAnimationResId() != null) {
+            try {
+                inAnimation = AnimationUtils.loadAnimation(mActivity, routeOptions.getInAnimationResId());
+            } catch (Throwable throwable) {
+                Log.e(TAG, "Failed to set inAnimation: " + throwable.getMessage(), throwable);
+                inAnimation = null;
+            }
+        }
+        existingViewAnimator.setInAnimation(inAnimation);
+        Animation outAnimation = null;
+        if (routeOptions.getOutAnimationResId() != null) {
+            try {
+                outAnimation = AnimationUtils.loadAnimation(mActivity, routeOptions.getOutAnimationResId());
+            } catch (Throwable throwable) {
+                Log.e(TAG, "Failed to set inAnimation: " + throwable.getMessage(), throwable);
+                outAnimation = null;
+            }
+        }
+        existingViewAnimator.setOutAnimation(outAnimation);
     }
 
     protected Class<ACT> getActivityClass() {

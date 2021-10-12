@@ -9,6 +9,7 @@ import m.co.rh.id.anavigator.component.StatefulViewFactory;
 public class NavRoute implements Serializable {
     private final StatefulViewFactory statefulViewFactory;
     private final NavPopCallback navPopCallback;
+    private final RouteOptions routeOptions;
     private final StatefulView statefulView;
     private final String routeName;
     private final Serializable routeArgs;
@@ -16,9 +17,13 @@ public class NavRoute implements Serializable {
     private Serializable routeResult;
 
     NavRoute(StatefulViewFactory statefulViewFactory,
-             NavPopCallback navPopCallback, StatefulView statefulView, String routeName, Serializable routeArgs, String routeStateKey) {
+             NavPopCallback navPopCallback,
+             RouteOptions routeOptions,
+             StatefulView statefulView,
+             String routeName, Serializable routeArgs, String routeStateKey) {
         this.statefulViewFactory = statefulViewFactory;
         this.navPopCallback = navPopCallback;
+        this.routeOptions = routeOptions;
         this.statefulView = statefulView;
         this.routeName = routeName;
         this.routeArgs = routeArgs;
@@ -31,6 +36,10 @@ public class NavRoute implements Serializable {
 
     NavPopCallback getNavPopCallback() {
         return navPopCallback;
+    }
+
+    RouteOptions getRouteOptions() {
+        return routeOptions;
     }
 
     StatefulView getStatefulView() {
