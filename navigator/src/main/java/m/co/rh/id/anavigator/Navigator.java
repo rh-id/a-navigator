@@ -95,6 +95,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     @Override
+    public void push(StatefulViewFactory statefulViewFactory, NavPopCallback navPopCallback) {
+        push(statefulViewFactory, null, navPopCallback);
+    }
+
+    @Override
     public void push(StatefulViewFactory statefulViewFactory, Serializable args, NavPopCallback navPopCallback) {
         if (mIsNavigating) {
             // It is possible that push is invoked somewhere during initState or buildView
@@ -121,6 +126,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             throw new NavigationRouteNotFound(routeName + " not found");
         }
         push(statefulViewFactory, routeName, args, navPopCallback);
+    }
+
+    @Override
+    public void push(String routeName, NavPopCallback navPopCallback) {
+        push(routeName, null, navPopCallback);
     }
 
     private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback) {

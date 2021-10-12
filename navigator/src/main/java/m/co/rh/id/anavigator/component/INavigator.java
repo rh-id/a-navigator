@@ -22,6 +22,12 @@ public interface INavigator {
     void push(StatefulViewFactory statefulViewFactory, Serializable args);
 
     /**
+     * Same as {@link #push(StatefulViewFactory, Serializable, NavPopCallback)}
+     * with args value null
+     */
+    void push(StatefulViewFactory statefulViewFactory, NavPopCallback navPopCallback);
+
+    /**
      * Navigate to anonymous route using StatefulViewFactory.
      *
      * @param statefulViewFactory must not null
@@ -42,13 +48,19 @@ public interface INavigator {
 
     /**
      * Same as {@link #push(String, Serializable, NavPopCallback)}
+     * with args value null
+     */
+    void push(String routeName, NavPopCallback navPopCallback);
+
+    /**
+     * Same as {@link #push(String, Serializable, NavPopCallback)}
      * with NavPopCallback value null
      */
     void push(String routeName, Serializable args);
 
     /**
      * Same as {@link #push(String, Serializable, NavPopCallback)}
-     * with args null and NavPopCallback value null
+     * with args value null and NavPopCallback value null
      */
     void push(String routeName);
 
