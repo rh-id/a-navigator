@@ -677,7 +677,7 @@ class SnapshotHandler {
 
     SnapshotHandler(NavConfiguration navConfiguration) {
         mFile = navConfiguration.getSaveStateFile();
-        loadState(); // start load as early as possible
+        loadSnapshot(); // start load as early as possible
     }
 
     void saveState(Serializable serializable) {
@@ -703,22 +703,26 @@ class SnapshotHandler {
             if (mStateSnapshot != null) {
                 return getState();
             }
-            mStateSnapshot = getExecutorService().submit(() -> {
-                if (!mFile.exists()) {
-                    return null;
-                }
-                ByteArrayOutputStream output = new ByteArrayOutputStream();
-                FileInputStream input = new FileInputStream(mFile);
-                byte[] buffer = new byte[2048];
-                int b;
-                while (-1 != (b = input.read(buffer))) {
-                    output.write(buffer, 0, b);
-                }
-                return deserialize(output.toString());
-            });
+            loadSnapshot();
             return getState();
         }
         return null;
+    }
+
+    private void loadSnapshot() {
+        mStateSnapshot = getExecutorService().submit(() -> {
+            if (!mFile.exists()) {
+                return null;
+            }
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            FileInputStream input = new FileInputStream(mFile);
+            byte[] buffer = new byte[2048];
+            int b;
+            while (-1 != (b = input.read(buffer))) {
+                output.write(buffer, 0, b);
+            }
+            return deserialize(output.toString());
+        });
     }
 
     void clearState() {
