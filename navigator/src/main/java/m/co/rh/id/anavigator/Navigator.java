@@ -427,6 +427,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         Serializable routeStack = mNavSnapshotHandler.loadState();
         if (routeStack instanceof LinkedList) {
             mNavRouteStack = (LinkedList<NavRoute>) routeStack;
+            // guard navigator in case push or pop is called inside provideNavigator
+            mIsNavigating = true;
             // re-inject navigator
             for (NavRoute navRoute : mNavRouteStack) {
                 StatefulView statefulView = navRoute.getStatefulView();
@@ -434,9 +436,15 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                     ((RequireNavigator) statefulView).provideNavigator(this);
                 }
             }
+            mIsNavigating = false;
+            if (!mPendingNavigatorRoute.isEmpty()) {
+                mPendingNavigatorRoute.pop().run();
+            }
             Log.i(TAG, "restored navigator state");
         }
         if (!mNavRouteStack.isEmpty()) {
+            // guard navigator in case push or pop is called inside buildView
+            mIsNavigating = true;
             int last = mNavRouteStack.size() - 1;
             for (int i = last; i >= 0; i--) {
                 NavRoute navRoute = mNavRouteStack.get(i);
@@ -446,6 +454,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 );
             }
             viewAnimator.setDisplayedChild(last);
+            mIsNavigating = false;
+            if (!mPendingNavigatorRoute.isEmpty()) {
+                mPendingNavigatorRoute.pop().run();
+            }
         } else {
             push(mNavConfiguration.getInitialRouteName());
         }
