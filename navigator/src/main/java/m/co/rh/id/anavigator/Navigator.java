@@ -677,7 +677,9 @@ class SnapshotHandler {
 
     SnapshotHandler(NavConfiguration navConfiguration) {
         mFile = navConfiguration.getSaveStateFile();
-        loadSnapshot(); // start load as early as possible
+        if (mFile != null) {
+            loadSnapshot(); // start load as early as possible
+        }
     }
 
     void saveState(Serializable serializable) {
