@@ -77,6 +77,7 @@ public class MyApplication extends Application {
         // can be re-used if needed
         navMap2.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
         NavConfiguration.Builder<AppCompatExampleActivity, StatefulView> navBuilder2 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap2);
+        navBuilder2.setSaveStateFile(new File(getCacheDir(), "AppCompatNavState"));
         NavConfiguration<AppCompatExampleActivity, StatefulView> navConfiguration2 =
                 navBuilder2.build();
         Navigator<AppCompatExampleActivity, StatefulView> navigator2 =

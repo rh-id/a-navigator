@@ -36,8 +36,11 @@ public class AppCompatHomePage extends StatefulView<AppCompatActivity> implement
         DrawerLayout drawerLayout = view.findViewById(R.id.drawer);
         NavigationView navigationView = view.findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(item -> {
-            if (item.getItemId() == R.id.nav_second) {
+            int itemId = item.getItemId();
+            if (itemId == R.id.nav_second) {
                 mNavigator.push(Routes.SECOND_PAGE);
+            } else if (itemId == R.id.nav_compose_example) {
+                mNavigator.push((args, activity1) -> new ExampleComposePage());
             }
             return false;
         });

@@ -10,7 +10,12 @@ To put it simply, imagine Fragment and ViewModel as one component, a fragment th
 One navigator controls one activity.
 
 Nested navigator supported through `INavigator.createViewNavigator`.
-you will need to have one navigator as root and setup view navigator by calling that method
+you will need to have one navigator as root and setup view navigator by calling that method.
+
+This navigator can handle Jetpack Compose View as well,
+see `AppCompatExampleActivity.java` and `ExampleComposePage.kt` for example implementation.
+It is best to use Java language rather than Kotlin when using this library especially when save state is enabled.
+If you are not planning to use save state then it should be fine.
 
 ## Example Usage
 

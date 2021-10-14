@@ -8,5 +8,9 @@
             android:id="@+id/nav_second"
             android:icon="@drawable/ic_menu_camera"
             android:title="@string/menu_second" />
+        <item
+            android:id="@+id/nav_compose_example"
+            android:icon="@drawable/ic_menu_camera"
+            android:title="@string/compose_example_page" />
     </group>
 </menu>
