@@ -702,6 +702,7 @@ class SnapshotHandler {
                     throw new IllegalStateException("unable to save state, snapshot cant be serialized");
                 }
                 if (!mFile.exists()) {
+                    mFile.getParentFile().mkdirs();
                     mFile.createNewFile();
                 }
                 FileOutputStream fileOutputStream = new FileOutputStream(mFile);

@@ -50,7 +50,7 @@ public class MyApplication extends Application {
         navMap.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
         navMap.put(Routes.BOTTOM_NAV_PAGE, (args, activity) -> new BottomNavHomePage());
         NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilder1 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap);
-        navBuilder1.setSaveStateFile(new File(getCacheDir(), "navigator1State"));
+        navBuilder1.setSaveStateFile(new File(getCacheDir(), "anavigator/navigator1State"));
 
         NavConfiguration<RawActivity, StatefulView<Activity>> navConfiguration =
                 navBuilder1.build();
