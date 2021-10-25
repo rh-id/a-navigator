@@ -12,6 +12,9 @@ import android.view.animation.TranslateAnimation;
 import java.io.File;
 import java.util.Map;
 
+import javax.crypto.Cipher;
+import javax.crypto.NullCipher;
+
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
 
 
@@ -22,6 +25,8 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private Animation defaultInAnimation;
     private Animation defaultOutAnimation;
     private File saveStateFile;
+    private Cipher saveStateEncryptCipher;
+    private Cipher saveStateDecryptCipher;
 
     private NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
         if (initialRouteName == null) {
@@ -54,12 +59,22 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return saveStateFile;
     }
 
+    public Cipher getSaveStateEncryptCipher() {
+        return saveStateEncryptCipher;
+    }
+
+    public Cipher getSaveStateDecryptCipher() {
+        return saveStateDecryptCipher;
+    }
+
     public static class Builder<ACT extends Activity, SV extends StatefulView> {
         private String initialRouteName;
         private Map<String, StatefulViewFactory<ACT, SV>> navMap;
         private Animation inAnimation;
         private Animation outAnimation;
         private File saveStateFile;
+        private Cipher saveStateEncryptCipher;
+        private Cipher saveStateDecryptCipher;
 
         /**
          * @param initialRouteName initial route to be pushed to navigator
@@ -91,6 +106,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
          * <p>
          * the StatefulView states will be stored in this file by relying on java object serialization mechanism.
          * Use SealedObject class instead of default Serializable fields if you need to secure/encrypt them.
+         * Or set the cipher {@link #setSaveStateCipher(Cipher, Cipher)} to automatically encrypt navigation state
          * <p>
          * When app gets killed and re-opened, navigator will handle state restoration,
          * see https://developer.android.com/topic/libraries/architecture/saving-states
@@ -98,11 +114,23 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
          * The states will be cleared only when activity is finishing properly.
          * <p>
          * NOTE: Make sure you have decent java serialization knowledge before using this.
-         * Saving state can be quiet tricky to handle,
-         * not to mention the states are not encrypted out of the box by this navigator
+         * Saving state can be quiet tricky to handle.
          */
         public Builder setSaveStateFile(File file) {
             this.saveStateFile = file;
+            return this;
+        }
+
+        /**
+         * Encrypt navigation state cipher.
+         * Encryption will not happen if either or both is null
+         *
+         * @param encrypt cipher to be used to encrypt, make sure it was initialized before set
+         * @param decrypt cipher to be used to decryot, make sure it was initialized before set
+         */
+        public Builder setSaveStateCipher(Cipher encrypt, Cipher decrypt) {
+            this.saveStateEncryptCipher = encrypt;
+            this.saveStateDecryptCipher = decrypt;
             return this;
         }
 
@@ -127,6 +155,13 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             navConfiguration.defaultInAnimation = inAnimation;
             navConfiguration.defaultOutAnimation = outAnimation;
             navConfiguration.saveStateFile = saveStateFile;
+            if (saveStateEncryptCipher == null || saveStateDecryptCipher == null) {
+                navConfiguration.saveStateEncryptCipher = new NullCipher();
+                navConfiguration.saveStateDecryptCipher = new NullCipher();
+            } else {
+                navConfiguration.saveStateEncryptCipher = saveStateEncryptCipher;
+                navConfiguration.saveStateDecryptCipher = saveStateDecryptCipher;
+            }
             return navConfiguration;
         }
     }

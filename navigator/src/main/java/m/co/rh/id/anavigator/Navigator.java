@@ -28,6 +28,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import javax.crypto.Cipher;
+import javax.crypto.SealedObject;
+
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
@@ -685,9 +688,13 @@ class SnapshotHandler {
     private ExecutorService mExecutorService;
     private Future<Serializable> mStateSnapshot;
     private File mFile;
+    private Cipher mEncryptCipher;
+    private Cipher mDecryptCipher;
 
     SnapshotHandler(NavConfiguration navConfiguration) {
         mFile = navConfiguration.getSaveStateFile();
+        mEncryptCipher = navConfiguration.getSaveStateEncryptCipher();
+        mDecryptCipher = navConfiguration.getSaveStateDecryptCipher();
         if (mFile != null) {
             loadSnapshot(); // start load as early as possible
         }
@@ -704,7 +711,7 @@ class SnapshotHandler {
                     FileOutputStream fileOutputStream = new FileOutputStream(mFile);
                     BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream);
                     ObjectOutputStream oos = new ObjectOutputStream(bos);
-                    oos.writeObject(serializable);
+                    oos.writeObject(new SealedObject(serializable, mEncryptCipher));
                     oos.close();
                     bos.close();
                     fileOutputStream.close();
@@ -737,7 +744,8 @@ class SnapshotHandler {
                 FileInputStream fis = new FileInputStream(mFile);
                 BufferedInputStream bis = new BufferedInputStream(fis);
                 ObjectInputStream ois = new ObjectInputStream(bis);
-                result = (Serializable) ois.readObject();
+                result = (Serializable)
+                        ((SealedObject) ois.readObject()).getObject(mDecryptCipher);
                 ois.close();
                 bis.close();
                 fis.close();

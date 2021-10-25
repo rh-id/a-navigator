@@ -3,10 +3,17 @@ package m.co.rh.id.anavigator.example;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.util.Log;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 
 import m.co.rh.id.anavigator.NavConfiguration;
 import m.co.rh.id.anavigator.Navigator;
@@ -51,6 +58,23 @@ public class MyApplication extends Application {
         navMap.put(Routes.BOTTOM_NAV_PAGE, (args, activity) -> new BottomNavHomePage());
         NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilder1 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap);
         navBuilder1.setSaveStateFile(new File(getCacheDir(), "anavigator/navigator1State"));
+        // example cipher
+        try {
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2withHmacSHA1");
+            PBEKeySpec specKey = new PBEKeySpec("password".toCharArray(), "salt".getBytes(), 1
+                    , 256);
+            SecretKey key = factory.generateSecret(specKey);
+            byte[] iv = new byte[]{
+                    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+            };
+            Cipher encryptCipher = Cipher.getInstance("PBEWITHSHA256AND256BITAES-CBC-BC");
+            encryptCipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
+            Cipher decryptCipher = Cipher.getInstance("PBEWITHSHA256AND256BITAES-CBC-BC");
+            decryptCipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
+            navBuilder1.setSaveStateCipher(encryptCipher, decryptCipher);
+        } catch (Throwable throwable) {
+            Log.e("MyApplication", "Failed setting encrypted navigator", throwable);
+        }
 
         NavConfiguration<RawActivity, StatefulView<Activity>> navConfiguration =
                 navBuilder1.build();
