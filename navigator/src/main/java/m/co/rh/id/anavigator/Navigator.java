@@ -6,7 +6,6 @@ import android.content.ComponentCallbacks2;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,13 +13,11 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ViewAnimator;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -683,6 +680,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 // and it haven't been fix until 2020, see https://issuetracker.google.com/issues/37020082
 @SuppressWarnings("rawtypes")
 class SnapshotHandler {
+    private static final String TAG = SnapshotHandler.class.getName();
+
     private ExecutorService mExecutorService;
     private Future<Serializable> mStateSnapshot;
     private File mFile;
@@ -697,17 +696,21 @@ class SnapshotHandler {
     void saveState(Serializable serializable) {
         if (mFile != null) {
             mStateSnapshot = getExecutorService().submit(() -> {
-                String snapshot = serializeToString(serializable);
-                if (snapshot == null) {
-                    throw new IllegalStateException("unable to save state, snapshot cant be serialized");
-                }
                 if (!mFile.exists()) {
                     mFile.getParentFile().mkdirs();
                     mFile.createNewFile();
                 }
-                FileOutputStream fileOutputStream = new FileOutputStream(mFile);
-                fileOutputStream.write(snapshot.getBytes());
-                fileOutputStream.close();
+                try {
+                    FileOutputStream fileOutputStream = new FileOutputStream(mFile);
+                    BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream);
+                    ObjectOutputStream oos = new ObjectOutputStream(bos);
+                    oos.writeObject(serializable);
+                    oos.close();
+                    bos.close();
+                    fileOutputStream.close();
+                } catch (Throwable throwable) {
+                    Log.e(TAG, "Failed to save state", throwable);
+                }
                 return serializable;
             });
         }
@@ -729,14 +732,19 @@ class SnapshotHandler {
             if (!mFile.exists()) {
                 return null;
             }
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            FileInputStream input = new FileInputStream(mFile);
-            byte[] buffer = new byte[2048];
-            int b;
-            while (-1 != (b = input.read(buffer))) {
-                output.write(buffer, 0, b);
+            Serializable result = null;
+            try {
+                FileInputStream fis = new FileInputStream(mFile);
+                BufferedInputStream bis = new BufferedInputStream(fis);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                result = (Serializable) ois.readObject();
+                ois.close();
+                bis.close();
+                fis.close();
+            } catch (Throwable throwable) {
+                Log.e(TAG, "Failed to load snapshot", throwable);
             }
-            return deserialize(output.toString());
+            return result;
         });
     }
 
@@ -755,28 +763,6 @@ class SnapshotHandler {
             mExecutorService = Executors.newSingleThreadExecutor();
         }
         return mExecutorService;
-    }
-
-    private String serializeToString(Serializable serializable) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(serializable);
-        oos.close();
-        baos.close();
-        return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
-    }
-
-    private Serializable deserialize(String serializableString) throws IOException, ClassNotFoundException {
-        Serializable result = null;
-        if (serializableString != null) {
-            byte[] base64decodedBytes = Base64.decode(serializableString, Base64.DEFAULT);
-            InputStream in = new ByteArrayInputStream(base64decodedBytes);
-            ObjectInputStream oin = new ObjectInputStream(in);
-            result = (Serializable) oin.readObject();
-            oin.close();
-            in.close();
-        }
-        return result;
     }
 
     private Serializable getState() {
