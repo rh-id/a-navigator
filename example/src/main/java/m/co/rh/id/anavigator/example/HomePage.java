@@ -16,6 +16,7 @@ import com.google.android.material.snackbar.Snackbar;
 import java.io.Serializable;
 
 import m.co.rh.id.anavigator.Navigator;
+import m.co.rh.id.anavigator.RouteOptions;
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
@@ -78,7 +79,13 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
                         -> Toast.makeText(activity1, "Returned from second page with result: " + result, Toast.LENGTH_SHORT).show());
             } else if (itemId == R.id.nav_second_anonymous) {
                 mNavigator.push((args, activity1) -> new SecondPage(), null, (activity1, currentView, result)
-                        -> Toast.makeText(activity1, "Returned from second page anonymous route with result: " + result, Toast.LENGTH_SHORT).show());
+                                -> Toast.makeText(activity1, "Returned from second page anonymous route with result: " + result, Toast.LENGTH_SHORT).show(),
+                        RouteOptions.withAnimation(
+                                R.anim.slide_in_right,
+                                R.anim.slide_out_left,
+                                android.R.anim.slide_in_left,
+                                android.R.anim.slide_out_right
+                        ));
             } else if (itemId == R.id.nav_bottom_home) {
                 mNavigator.push(Routes.BOTTOM_NAV_PAGE);
             }

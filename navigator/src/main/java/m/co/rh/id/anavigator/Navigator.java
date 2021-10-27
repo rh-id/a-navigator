@@ -3,9 +3,11 @@ package m.co.rh.id.anavigator;
 import android.app.Activity;
 import android.app.Application;
 import android.content.ComponentCallbacks2;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -155,15 +157,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             ((RequireNavigator) statefulView).provideNavigator(this);
         }
         ViewAnimator existingViewAnimator = getViewAnimator();
-        if (routeOptions != null) {
-            setupRouteOptions(routeOptions, existingViewAnimator);
-        }
         View view = statefulView.buildView(mActivity, existingViewAnimator);
         existingViewAnimator.addView(view);
         existingViewAnimator.showNext();
-        if (routeOptions != null) {
-            resetViewAnimator(existingViewAnimator);
-        }
         // try to init view navigator everytime new route is pushed
         initViewNavigator();
         onRouteChanged(currentRoute, newRoute);
@@ -199,11 +195,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (mNavRouteStack.size() > 1) {
             ViewAnimator existingViewAnimator = getViewAnimator();
             // check for route options
-            NavRoute currentNavRoute = mNavRouteStack.peek();
-            RouteOptions routeOptions = currentNavRoute.getRouteOptions();
-            if (routeOptions != null) {
-                setupRouteOptions(routeOptions, existingViewAnimator);
-            }
             View currentView = existingViewAnimator.getCurrentView();
             existingViewAnimator.showPrevious();
             // Try reset view navigator before pop
@@ -211,9 +202,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             // cont pop
             popStack(existingViewAnimator.getCurrentView(), result);
             existingViewAnimator.removeView(currentView);
-            if (routeOptions != null) {
-                resetViewAnimator(existingViewAnimator);
-            }
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
                 mPendingNavigatorRoute.pop().run();
@@ -407,14 +395,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
     }
 
-    protected ViewAnimator createViewAnimator(ACT activity, int viewAnimatorId, NavConfiguration navConfiguration) {
-        ViewAnimator viewAnimator = new ViewAnimator(activity);
+    private ViewAnimator createViewAnimator(ACT activity, int viewAnimatorId, NavConfiguration navConfiguration) {
+        ViewAnimator viewAnimator = new CustomViewAnimator(activity, this);
         viewAnimator.setId(viewAnimatorId);
         viewAnimator.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
-        viewAnimator.setInAnimation(navConfiguration.getDefaultInAnimation());
-        viewAnimator.setOutAnimation(navConfiguration.getDefaultOutAnimation());
         viewAnimator.setAnimateFirstView(true);
         return viewAnimator;
     }
@@ -461,35 +447,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         } else {
             push(mNavConfiguration.getInitialRouteName());
         }
-    }
-
-    private void resetViewAnimator(ViewAnimator existingViewAnimator) {
-        // reset animator
-        existingViewAnimator.setInAnimation(mNavConfiguration.getDefaultInAnimation());
-        existingViewAnimator.setOutAnimation(mNavConfiguration.getDefaultOutAnimation());
-    }
-
-    private void setupRouteOptions(RouteOptions routeOptions, ViewAnimator existingViewAnimator) {
-        Animation inAnimation = null;
-        if (routeOptions.getInAnimationResId() != null) {
-            try {
-                inAnimation = AnimationUtils.loadAnimation(mActivity, routeOptions.getInAnimationResId());
-            } catch (Throwable throwable) {
-                Log.e(TAG, "Failed to set inAnimation: " + throwable.getMessage(), throwable);
-                inAnimation = null;
-            }
-        }
-        existingViewAnimator.setInAnimation(inAnimation);
-        Animation outAnimation = null;
-        if (routeOptions.getOutAnimationResId() != null) {
-            try {
-                outAnimation = AnimationUtils.loadAnimation(mActivity, routeOptions.getOutAnimationResId());
-            } catch (Throwable throwable) {
-                Log.e(TAG, "Failed to set inAnimation: " + throwable.getMessage(), throwable);
-                outAnimation = null;
-            }
-        }
-        existingViewAnimator.setOutAnimation(outAnimation);
     }
 
     protected Class<ACT> getActivityClass() {
@@ -797,5 +754,99 @@ class SnapshotHandler {
             mStateSnapshot.cancel(false);
             mStateSnapshot = null;
         }
+    }
+}
+
+/**
+ * Custom view animator that automatically switch the inAnimation and outAnimation when showPrevious or showNext
+ */
+class CustomViewAnimator extends ViewAnimator {
+
+    private Navigator mNavigator;
+
+    public CustomViewAnimator(Context context, Navigator navigator) {
+        super(context);
+        mNavigator = navigator;
+    }
+
+    public CustomViewAnimator(Context context, AttributeSet attrs, Navigator navigator) {
+        super(context, attrs);
+        mNavigator = navigator;
+    }
+
+    @Override
+    public void showPrevious() {
+        NavConfiguration navConfiguration = mNavigator.getNavConfiguration();
+        NavRoute currentRoute = mNavigator.getCurrentRoute();
+        Animation inAnimation = navConfiguration.getDefaultPopEnterAnimation();
+        Animation outAnimation = navConfiguration.getDefaultPopExitAnimation();
+        if (currentRoute != null) {
+            RouteOptions routeOptions = currentRoute.getRouteOptions();
+            if (routeOptions != null) {
+                Integer inAnimationId = routeOptions.getPopEnterAnimationResId();
+                if (inAnimationId != null) {
+                    try {
+                        inAnimation = AnimationUtils.loadAnimation(getContext(),
+                                inAnimationId);
+                    } catch (Throwable t) {
+                        inAnimation = null;
+                    }
+                } else {
+                    inAnimation = null;
+                }
+                Integer outAnimationId = routeOptions.getPopExitAnimationResId();
+                if (outAnimationId != null) {
+                    try {
+                        outAnimation = AnimationUtils.loadAnimation(getContext(),
+                                outAnimationId);
+                    } catch (Throwable t) {
+                        outAnimation = null;
+                    }
+                } else {
+                    outAnimation = null;
+                }
+            }
+        }
+        setInAnimation(inAnimation);
+        setOutAnimation(outAnimation);
+        super.showPrevious();
+    }
+
+    @Override
+    public void showNext() {
+        NavConfiguration navConfiguration = mNavigator.getNavConfiguration();
+        NavRoute currentRoute = mNavigator.getCurrentRoute();
+        Animation inAnimation = navConfiguration.getDefaultEnterAnimation();
+        Animation outAnimation = navConfiguration.getDefaultExitAnimation();
+        if (currentRoute != null) {
+            RouteOptions routeOptions = mNavigator.getCurrentRoute().getRouteOptions();
+            if (routeOptions != null) {
+                Integer inAnimationId = routeOptions.getEnterAnimationResId();
+                if (inAnimationId != null) {
+                    try {
+                        inAnimation = AnimationUtils.loadAnimation(getContext(),
+                                inAnimationId);
+                    } catch (Throwable t) {
+                        inAnimation = null;
+                    }
+                } else {
+                    inAnimation = null;
+                }
+                Integer outAnimationId = routeOptions.getExitAnimationResId();
+                if (outAnimationId != null) {
+                    try {
+                        outAnimation = AnimationUtils.loadAnimation(getContext(),
+                                outAnimationId);
+                    } catch (Throwable t) {
+                        outAnimation = null;
+                    }
+                } else {
+                    outAnimation = null;
+                }
+            }
+        }
+        setInAnimation(inAnimation);
+        setOutAnimation(outAnimation);
+        super.showNext();
     }
 }

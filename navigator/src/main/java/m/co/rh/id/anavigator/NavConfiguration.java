@@ -2,11 +2,11 @@ package m.co.rh.id.anavigator;
 
 
 import android.app.Activity;
-import android.view.animation.AccelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.view.animation.TranslateAnimation;
 
 import java.io.File;
@@ -22,8 +22,10 @@ import m.co.rh.id.anavigator.component.StatefulViewFactory;
 public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private String initialRouteName;
     private Map<String, StatefulViewFactory<ACT, SV>> navMap;
-    private Animation defaultInAnimation;
-    private Animation defaultOutAnimation;
+    private Animation defaultEnterAnimation;
+    private Animation defaultExitAnimation;
+    private Animation defaultPopEnterAnimation;
+    private Animation defaultPopExitAnimation;
     private File saveStateFile;
     private Cipher saveStateEncryptCipher;
     private Cipher saveStateDecryptCipher;
@@ -47,12 +49,20 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return navMap;
     }
 
-    Animation getDefaultInAnimation() {
-        return defaultInAnimation;
+    Animation getDefaultEnterAnimation() {
+        return defaultEnterAnimation;
     }
 
-    Animation getDefaultOutAnimation() {
-        return defaultOutAnimation;
+    Animation getDefaultExitAnimation() {
+        return defaultExitAnimation;
+    }
+
+    public Animation getDefaultPopEnterAnimation() {
+        return defaultPopEnterAnimation;
+    }
+
+    public Animation getDefaultPopExitAnimation() {
+        return defaultPopExitAnimation;
     }
 
     public File getSaveStateFile() {
@@ -70,8 +80,10 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     public static class Builder<ACT extends Activity, SV extends StatefulView> {
         private String initialRouteName;
         private Map<String, StatefulViewFactory<ACT, SV>> navMap;
-        private Animation inAnimation;
-        private Animation outAnimation;
+        private Animation enterAnimation;
+        private Animation exitAnimation;
+        private Animation popEnterAnimation;
+        private Animation popExitAnimation;
         private File saveStateFile;
         private Cipher saveStateEncryptCipher;
         private Cipher saveStateDecryptCipher;
@@ -86,18 +98,18 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         }
 
         /**
-         * animation used when a view is shown/displayed
+         * Set default animation for this navigator
+         *
+         * @param enterAnimation    Animation when next view showing
+         * @param exitAnimation     Animation when current view exiting
+         * @param popEnterAnimation Animation when navigator pop and previous view showing
+         * @param popExitAnimation  Animation when navigator pop and current view exiting
          */
-        public Builder setInAnimation(Animation inAnimation) {
-            this.inAnimation = inAnimation;
-            return this;
-        }
-
-        /**
-         * animation used when a view is hidden/removed from navigator
-         */
-        public Builder setOutAnimation(Animation outAnimation) {
-            this.outAnimation = outAnimation;
+        public Builder setAnimation(Animation enterAnimation, Animation exitAnimation, Animation popEnterAnimation, Animation popExitAnimation) {
+            this.enterAnimation = enterAnimation;
+            this.exitAnimation = exitAnimation;
+            this.popEnterAnimation = popEnterAnimation;
+            this.popExitAnimation = popExitAnimation;
             return this;
         }
 
@@ -136,24 +148,40 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
 
         public NavConfiguration<ACT, SV> build() {
             NavConfiguration<ACT, SV> navConfiguration = new NavConfiguration<>(initialRouteName, navMap);
-            if (inAnimation == null) {
+            if (enterAnimation == null) {
                 AnimationSet inAnimationSet = new AnimationSet(true);
                 inAnimationSet.setInterpolator(new DecelerateInterpolator());
-                inAnimationSet.setDuration(300);
+                inAnimationSet.setDuration(200);
                 inAnimationSet.addAnimation(new AlphaAnimation(0, 1));
                 inAnimationSet.addAnimation(new TranslateAnimation(0, 0, 100, 0));
-                inAnimation = inAnimationSet;
+                enterAnimation = inAnimationSet;
             }
-            if (outAnimation == null) {
+            if (exitAnimation == null) {
                 AnimationSet outAnimationSet = new AnimationSet(true);
-                outAnimationSet.setInterpolator(new AccelerateInterpolator());
-                outAnimationSet.setDuration(50);
-                outAnimationSet.addAnimation(new AlphaAnimation(1, 0));
-                outAnimationSet.addAnimation(new TranslateAnimation(0, 0, 0, -100));
-                outAnimation = outAnimationSet;
+                outAnimationSet.setInterpolator(new LinearInterpolator());
+                outAnimationSet.setDuration(200);
+                outAnimationSet.addAnimation(new AlphaAnimation(0.5f, 0));
+                exitAnimation = outAnimationSet;
             }
-            navConfiguration.defaultInAnimation = inAnimation;
-            navConfiguration.defaultOutAnimation = outAnimation;
+            if (popEnterAnimation == null) {
+                AnimationSet inAnimationSet = new AnimationSet(true);
+                inAnimationSet.setInterpolator(new LinearInterpolator());
+                inAnimationSet.setDuration(200);
+                inAnimationSet.addAnimation(new AlphaAnimation(0, 1));
+                popEnterAnimation = inAnimationSet;
+            }
+            if (popExitAnimation == null) {
+                AnimationSet outAnimationSet = new AnimationSet(true);
+                outAnimationSet.setInterpolator(new LinearInterpolator());
+                outAnimationSet.setDuration(200);
+                outAnimationSet.addAnimation(new AlphaAnimation(0.5f, 0));
+                outAnimationSet.addAnimation(new TranslateAnimation(0, 0, 0, 100));
+                popExitAnimation = outAnimationSet;
+            }
+            navConfiguration.defaultEnterAnimation = enterAnimation;
+            navConfiguration.defaultExitAnimation = exitAnimation;
+            navConfiguration.defaultPopEnterAnimation = popEnterAnimation;
+            navConfiguration.defaultPopExitAnimation = popExitAnimation;
             navConfiguration.saveStateFile = saveStateFile;
             if (saveStateEncryptCipher == null || saveStateDecryptCipher == null) {
                 navConfiguration.saveStateEncryptCipher = new NullCipher();

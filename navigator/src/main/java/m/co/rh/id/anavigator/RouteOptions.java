@@ -6,35 +6,44 @@ public class RouteOptions implements Serializable {
     /**
      * Helper method to setup in and out animation for transition.
      *
-     * @param inAnimationResId  in animation resource id to be inflated using AnimationUtils.loadAnimation,
-     *                          if null means no animation
-     * @param outAnimationResId out animation resource id to be inflated using AnimationUtils.loadAnimation,
-     *                          if null means no animation
+     * @param enterAnimationResId    enter animation resource id to be inflated using AnimationUtils.loadAnimation,
+     *                               if null means no animation
+     * @param exitAnimationResId     exit animation resource id to be inflated using AnimationUtils.loadAnimation,
+     *                               if null means no animation
+     * @param popEnterAnimationResId pop enter animation resource id to be inflated using AnimationUtils.loadAnimation,
+     *                               if null means no animation
+     * @param popExitAnimationResId  pop exit animation resource id to be inflated using AnimationUtils.loadAnimation,
+     *                               if null means no animation
      * @return RouteOptions instance with in and out animation setup
      */
-    public static RouteOptions inOutAnimation(Integer inAnimationResId, Integer outAnimationResId) {
+    public static RouteOptions withAnimation(Integer enterAnimationResId, Integer exitAnimationResId,
+                                             Integer popEnterAnimationResId, Integer popExitAnimationResId) {
         RouteOptions routeOptions = new RouteOptions();
-        routeOptions.setInAnimationResId(inAnimationResId);
-        routeOptions.setOutAnimationResId(outAnimationResId);
+        routeOptions.enterAnimationResId = enterAnimationResId;
+        routeOptions.exitAnimationResId = exitAnimationResId;
+        routeOptions.popEnterAnimationResId = popEnterAnimationResId;
+        routeOptions.popExitAnimationResId = popExitAnimationResId;
         return routeOptions;
     }
 
-    private Integer inAnimationResId;
-    private Integer outAnimationResId;
+    private Integer enterAnimationResId;
+    private Integer exitAnimationResId;
+    private Integer popEnterAnimationResId;
+    private Integer popExitAnimationResId;
 
-    public Integer getInAnimationResId() {
-        return inAnimationResId;
+    public Integer getEnterAnimationResId() {
+        return enterAnimationResId;
     }
 
-    public void setInAnimationResId(Integer inAnimationResId) {
-        this.inAnimationResId = inAnimationResId;
+    public Integer getExitAnimationResId() {
+        return exitAnimationResId;
     }
 
-    public Integer getOutAnimationResId() {
-        return outAnimationResId;
+    public Integer getPopEnterAnimationResId() {
+        return popEnterAnimationResId;
     }
 
-    public void setOutAnimationResId(Integer outAnimationResId) {
-        this.outAnimationResId = outAnimationResId;
+    public Integer getPopExitAnimationResId() {
+        return popExitAnimationResId;
     }
 }

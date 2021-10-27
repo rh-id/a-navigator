@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.util.Log;
+import android.view.animation.AnimationUtils;
 
 import java.io.File;
 import java.util.HashMap;
@@ -87,6 +88,12 @@ public class MyApplication extends Application {
         bottomPageMap.put(Routes.PAGE_2, (args, activity) -> new Bottom2Page());
         NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilderBottom = new NavConfiguration.Builder<>(Routes.HOME_PAGE, bottomPageMap);
         navBuilderBottom.setSaveStateFile(new File(getCacheDir(), "navigatorBottomState"));
+        navBuilderBottom.setAnimation(
+                AnimationUtils.loadAnimation(this, R.anim.slide_in_right),
+                AnimationUtils.loadAnimation(this, R.anim.slide_out_left),
+                AnimationUtils.loadAnimation(this, android.R.anim.slide_in_left),
+                AnimationUtils.loadAnimation(this, android.R.anim.slide_out_right)
+        );
         navigator.createViewNavigator(navBuilderBottom.build(), R.id.unique_container1);
 
 

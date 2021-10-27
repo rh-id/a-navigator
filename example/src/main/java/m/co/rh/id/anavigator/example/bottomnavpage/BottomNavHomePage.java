@@ -7,7 +7,6 @@ import android.view.ViewGroup;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import m.co.rh.id.anavigator.NavRoute;
-import m.co.rh.id.anavigator.RouteOptions;
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
@@ -46,13 +45,13 @@ public class BottomNavHomePage extends StatefulView<Activity> implements Require
             String routeName = navRoute.getRouteName();
             int itemId = item.getItemId();
             if (itemId == R.id.menu_nav_home && !Routes.HOME_PAGE.equals(routeName)) {
-                mViewNavigator.push(Routes.HOME_PAGE, null, null, RouteOptions.inOutAnimation(null, R.anim.hyperspace_jump));
+                mViewNavigator.push(Routes.HOME_PAGE);
                 return true;
             } else if (itemId == R.id.menu_nav_bottom_page1 && !Routes.PAGE_1.equals(routeName)) {
-                mViewNavigator.push(Routes.PAGE_1, null, null, RouteOptions.inOutAnimation(R.anim.hyperspace_jump, R.anim.hyperspace_jump));
+                mViewNavigator.push(Routes.PAGE_1);
                 return true;
             } else if (itemId == R.id.menu_nav_bottom_page2 && !Routes.PAGE_2.equals(routeName)) {
-                mViewNavigator.push(Routes.PAGE_2, null, null, RouteOptions.inOutAnimation(null, R.anim.hyperspace_jump));
+                mViewNavigator.push(Routes.PAGE_2);
                 return true;
             }
             return false;
