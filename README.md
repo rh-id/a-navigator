@@ -1,5 +1,7 @@
 # a-navigator
 
+![Android CI](https://github.com/rh-id/a-navigator/actions/workflows/gradlew-build.yml/badge.svg)
+
 This is a navigation framework for Android projects.
 This framework doesn't follow common Model View View Model (MVVM) approach.
 It follows what in my opinion called Model Stateful View (MSV) approach.
