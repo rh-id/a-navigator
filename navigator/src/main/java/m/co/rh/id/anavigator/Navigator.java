@@ -312,6 +312,48 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     @Override
+    public void reBuildRoute(int routeIndex) {
+        if (routeIndex < 0) {
+            throw new NavigationRouteNotFound("Index must be 0 or more");
+        }
+        if (routeIndex >= mNavRouteStack.size()) {
+            throw new NavigationRouteNotFound("Index exceed total route");
+        }
+        if (mIsNavigating) {
+            mPendingNavigatorRoute.add(() -> reBuildRoute(routeIndex));
+            return;
+        }
+        mIsNavigating = true;
+        int lastIndex = mNavRouteStack.size() - 1;
+        int selectedNavRouteIndex = lastIndex - routeIndex;
+        int selectedViewIndex = routeIndex;
+        NavRoute navRoute = mNavRouteStack.get(selectedNavRouteIndex);
+        ViewAnimator viewAnimator = getViewAnimator();
+        View childView = viewAnimator.getChildAt(selectedViewIndex);
+        View currentView = viewAnimator.getCurrentView();
+        View buildView = navRoute.getStatefulView().buildView(getActivity(), viewAnimator);
+        viewAnimator.setInAnimation(null);
+        viewAnimator.setOutAnimation(null);
+        viewAnimator.removeViewAt(selectedViewIndex);
+        viewAnimator.addView(buildView, selectedViewIndex);
+        if (childView == currentView) {
+            viewAnimator.setDisplayedChild(selectedViewIndex);
+        }
+        initViewNavigator();
+        mIsNavigating = false;
+        if (!mPendingNavigatorRoute.isEmpty()) {
+            mPendingNavigatorRoute.pop().run();
+        }
+    }
+
+    @Override
+    public void reBuildAllRoute() {
+        for (int i = 0; i < mNavRouteStack.size(); i++) {
+            reBuildRoute(i);
+        }
+    }
+
+    @Override
     public void createViewNavigator(NavConfiguration navConfiguration, int viewGroupContainerId) {
         ViewNavigator viewNavigator = new ViewNavigator(mActivityClass, navConfiguration, viewGroupContainerId);
         mViewNavigatorList.add(viewNavigator);
@@ -339,6 +381,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     @Override
     public NavRoute getCurrentRoute() {
         return mNavRouteStack.peek();
+    }
+
+    @Override
+    public int getCurrentRouteIndex() {
+        return mNavRouteStack.size() - 1;
     }
 
     @Override

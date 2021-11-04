@@ -109,10 +109,26 @@ public interface INavigator {
     void retry(Serializable overrideArgs);
 
     /**
-     * Retry the same path, basically means pop current route without triggering pop callback
+     * Retry the same route, basically means pop current route without triggering pop callback
      * and push the same route with the same args and callback
      */
     void retry();
+
+    /**
+     * Rebuild a route specified by routeIndex.
+     * Basically this will call StatefulView.createView without disposing or popping the route.
+     *
+     * @param routeIndex route index to rebuild,
+     *                   initial route index is 0, when navigator is pushed index increase by 1,
+     *                   when popped decrease by 1
+     * @throws NavigationRouteNotFound if route specified by routeIndex not found
+     */
+    void reBuildRoute(int routeIndex);
+
+    /**
+     * Rebuild all route, start from initial route.
+     */
+    void reBuildAllRoute();
 
     /**
      * Finish activity with result.
@@ -167,6 +183,13 @@ public interface INavigator {
      * @return current navigator route
      */
     NavRoute getCurrentRoute();
+
+    /**
+     * @return current route index, initial route index is 0,
+     * when navigator is pushed index increase by 1,
+     * when popped decrease by 1
+     */
+    int getCurrentRouteIndex();
 
     /**
      * Signal to navigator that back button is pressed,

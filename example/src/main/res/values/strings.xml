@@ -28,4 +28,7 @@
     <string name="page_2">Page 2</string>
     <string name="bottomviewnavigator_page">BottomViewNavigator Page</string>
     <string name="compose_example_page">Compose Example Page</string>
+    <string name="rebuild_view_from_count_value">Rebuild View from Count Value</string>
+    <string name="bottom_page_1">Bottom Page 1</string>
+    <string name="bottom_page_2">Bottom Page 2</string>
 </resources>

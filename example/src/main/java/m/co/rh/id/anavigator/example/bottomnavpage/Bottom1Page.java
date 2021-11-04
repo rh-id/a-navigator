@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.button.MaterialButton;
 
@@ -25,15 +26,20 @@ public class Bottom1Page extends StatefulView<Activity> implements RequireNaviga
     protected View createView(Activity activity, ViewGroup container) {
         View view = activity.getLayoutInflater().inflate(R.layout.page_bottomnav_page1, container, false);
         TextView textView = view.findViewById(R.id.textView);
-        textView.setText(activity.getString(R.string.counter, counter));
+        textView.setText(activity.getString(R.string.bottom_page_1) + " "
+                + activity.getString(R.string.counter, counter));
         MaterialButton plusButton = view.findViewById(R.id.button_plus);
         plusButton.setOnClickListener(view12 -> {
             counter++;
-            textView.setText(activity.getString(R.string.counter, counter));
+            textView.setText(activity.getString(R.string.bottom_page_1) + " "
+                    + activity.getString(R.string.counter, counter));
         });
         MaterialButton returnButton = view.findViewById(R.id.button_return);
         returnButton.setOnClickListener(view1 ->
                 mNavigator.pop(counter));
+        Toast.makeText(activity, activity.getString(R.string.bottom_page_1),
+                Toast.LENGTH_SHORT)
+                .show();
         return view;
     }
 
