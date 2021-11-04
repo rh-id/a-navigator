@@ -348,9 +348,24 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void reBuildAllRoute() {
-        getViewAnimator().postInvalidate();
-        for (int i = 0; i < mNavRouteStack.size(); i++) {
-            reBuildRoute(i);
+        if (mIsNavigating) {
+            mPendingNavigatorRoute.add(() -> reBuildAllRoute());
+            return;
+        }
+        mIsNavigating = true;
+        ViewAnimator newViewAnimator = createViewAnimator(mActivity, mViewAnimatorId, mNavConfiguration);
+        for (int i = mNavRouteStack.size() - 1; i >= 0; i--) {
+            NavRoute navRoute = mNavRouteStack.get(i);
+            View view = navRoute.getStatefulView().buildView(mActivity, newViewAnimator);
+            newViewAnimator.addView(view);
+        }
+        newViewAnimator.setDisplayedChild(mNavRouteStack.size() - 1);
+        getViewAnimator().removeAllViews();
+        setViewAnimator(mActivity, newViewAnimator);
+        initViewNavigator();
+        mIsNavigating = false;
+        if (!mPendingNavigatorRoute.isEmpty()) {
+            mPendingNavigatorRoute.pop().run();
         }
     }
 
