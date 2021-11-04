@@ -348,6 +348,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void reBuildAllRoute() {
+        getViewAnimator().postInvalidate();
         for (int i = 0; i < mNavRouteStack.size(); i++) {
             reBuildRoute(i);
         }
