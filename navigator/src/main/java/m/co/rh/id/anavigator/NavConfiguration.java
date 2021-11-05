@@ -26,6 +26,8 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private Animation defaultExitAnimation;
     private Animation defaultPopEnterAnimation;
     private Animation defaultPopExitAnimation;
+    private Animation defaultReBuildEnterAnimation;
+    private Animation defaultReBuildExitAnimation;
     private File saveStateFile;
     private Cipher saveStateEncryptCipher;
     private Cipher saveStateDecryptCipher;
@@ -65,6 +67,14 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return defaultPopExitAnimation;
     }
 
+    public Animation getDefaultReBuildEnterAnimation() {
+        return defaultReBuildEnterAnimation;
+    }
+
+    public Animation getDefaultReBuildExitAnimation() {
+        return defaultReBuildExitAnimation;
+    }
+
     public File getSaveStateFile() {
         return saveStateFile;
     }
@@ -84,6 +94,8 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         private Animation exitAnimation;
         private Animation popEnterAnimation;
         private Animation popExitAnimation;
+        private Animation reBuildEnterAnimation;
+        private Animation reBuildExitAnimation;
         private File saveStateFile;
         private Cipher saveStateEncryptCipher;
         private Cipher saveStateDecryptCipher;
@@ -110,6 +122,18 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             this.exitAnimation = exitAnimation;
             this.popEnterAnimation = popEnterAnimation;
             this.popExitAnimation = popExitAnimation;
+            return this;
+        }
+
+        /**
+         * Set default animation for this navigator when reBuildRoute is invoked
+         *
+         * @param enterAnimation Animation when next view showing
+         * @param exitAnimation  Animation when current view exiting
+         */
+        public Builder setReBuildAnimation(Animation enterAnimation, Animation exitAnimation) {
+            this.reBuildEnterAnimation = enterAnimation;
+            this.reBuildExitAnimation = exitAnimation;
             return this;
         }
 
@@ -178,10 +202,22 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
                 outAnimationSet.addAnimation(new TranslateAnimation(0, 0, 0, 100));
                 popExitAnimation = outAnimationSet;
             }
+            if (reBuildEnterAnimation == null) {
+                Animation inAnimation = new AlphaAnimation(0, 1);
+                inAnimation.setDuration(200);
+                reBuildEnterAnimation = inAnimation;
+            }
+            if (reBuildExitAnimation == null) {
+                Animation outAnimation = new AlphaAnimation(1, 0);
+                outAnimation.setDuration(200);
+                reBuildExitAnimation = outAnimation;
+            }
             navConfiguration.defaultEnterAnimation = enterAnimation;
             navConfiguration.defaultExitAnimation = exitAnimation;
             navConfiguration.defaultPopEnterAnimation = popEnterAnimation;
             navConfiguration.defaultPopExitAnimation = popExitAnimation;
+            navConfiguration.defaultReBuildEnterAnimation = reBuildEnterAnimation;
+            navConfiguration.defaultReBuildExitAnimation = reBuildExitAnimation;
             navConfiguration.saveStateFile = saveStateFile;
             if (saveStateEncryptCipher == null || saveStateDecryptCipher == null) {
                 navConfiguration.saveStateEncryptCipher = new NullCipher();

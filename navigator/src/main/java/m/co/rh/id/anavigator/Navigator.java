@@ -337,6 +337,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         viewAnimator.removeViewAt(selectedViewIndex);
         viewAnimator.addView(buildView, selectedViewIndex);
         if (childView == currentView) {
+            // animate only when current view is showing
+            viewAnimator.setInAnimation(mNavConfiguration.getDefaultReBuildEnterAnimation());
+            viewAnimator.setOutAnimation(mNavConfiguration.getDefaultReBuildExitAnimation());
             viewAnimator.setDisplayedChild(selectedViewIndex);
         }
         initViewNavigator();
@@ -360,8 +363,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             newViewAnimator.addView(view);
         }
         newViewAnimator.setDisplayedChild(mNavRouteStack.size() - 1);
-        getViewAnimator().removeAllViews();
+        getViewAnimator().startAnimation(mNavConfiguration.getDefaultReBuildExitAnimation());
         setViewAnimator(mActivity, newViewAnimator);
+        newViewAnimator.startAnimation(mNavConfiguration.getDefaultReBuildEnterAnimation());
         initViewNavigator();
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
