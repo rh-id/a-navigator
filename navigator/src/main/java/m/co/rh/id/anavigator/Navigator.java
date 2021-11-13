@@ -711,31 +711,41 @@ class SnapshotHandler {
 
     private ExecutorService mExecutorService;
     private Future<Serializable> mStateSnapshot;
-    private File mFile;
-    private Cipher mEncryptCipher;
-    private Cipher mDecryptCipher;
+    private NavConfiguration mNavConfiguration;
 
     SnapshotHandler(NavConfiguration navConfiguration) {
-        mFile = navConfiguration.getSaveStateFile();
-        mEncryptCipher = navConfiguration.getSaveStateEncryptCipher();
-        mDecryptCipher = navConfiguration.getSaveStateDecryptCipher();
-        if (mFile != null) {
+        mNavConfiguration = navConfiguration;
+        if (getFile() != null) {
             loadSnapshot(); // start load as early as possible
         }
     }
 
+    private File getFile() {
+        return mNavConfiguration.getSaveStateFile();
+    }
+
+    private Cipher getEncryptCipher() {
+        return mNavConfiguration.getSaveStateEncryptCipher();
+    }
+
+    private Cipher getDecryptCipher() {
+        return mNavConfiguration.getSaveStateDecryptCipher();
+    }
+
     void saveState(Serializable serializable) {
-        if (mFile != null) {
+        final File file = getFile();
+        final Cipher encryptCipher = getEncryptCipher();
+        if (file != null) {
             mStateSnapshot = getExecutorService().submit(() -> {
-                if (!mFile.exists()) {
-                    mFile.getParentFile().mkdirs();
-                    mFile.createNewFile();
+                if (!file.exists()) {
+                    file.getParentFile().mkdirs();
+                    file.createNewFile();
                 }
                 try {
-                    FileOutputStream fileOutputStream = new FileOutputStream(mFile);
+                    FileOutputStream fileOutputStream = new FileOutputStream(file);
                     BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream);
                     ObjectOutputStream oos = new ObjectOutputStream(bos);
-                    oos.writeObject(new SealedObject(serializable, mEncryptCipher));
+                    oos.writeObject(new SealedObject(serializable, encryptCipher));
                     oos.close();
                     bos.close();
                     fileOutputStream.close();
@@ -748,7 +758,7 @@ class SnapshotHandler {
     }
 
     Serializable loadState() {
-        if (mFile != null) {
+        if (getFile() != null) {
             if (mStateSnapshot != null) {
                 return getState();
             }
@@ -759,17 +769,19 @@ class SnapshotHandler {
     }
 
     private void loadSnapshot() {
+        final File file = getFile();
+        final Cipher decryptCipher = getDecryptCipher();
         mStateSnapshot = getExecutorService().submit(() -> {
-            if (!mFile.exists()) {
+            if (!file.exists()) {
                 return null;
             }
             Serializable result = null;
             try {
-                FileInputStream fis = new FileInputStream(mFile);
+                FileInputStream fis = new FileInputStream(file);
                 BufferedInputStream bis = new BufferedInputStream(fis);
                 ObjectInputStream ois = new ObjectInputStream(bis);
                 result = (Serializable)
-                        ((SealedObject) ois.readObject()).getObject(mDecryptCipher);
+                        ((SealedObject) ois.readObject()).getObject(decryptCipher);
                 ois.close();
                 bis.close();
                 fis.close();
@@ -785,9 +797,12 @@ class SnapshotHandler {
             mStateSnapshot.cancel(false);
             mStateSnapshot = null;
         }
-        getExecutorService().submit(() -> {
-            mFile.delete();
-        });
+        final File file = getFile();
+        if (file != null) {
+            getExecutorService().submit(() -> {
+                file.delete();
+            });
+        }
     }
 
     private ExecutorService getExecutorService() {

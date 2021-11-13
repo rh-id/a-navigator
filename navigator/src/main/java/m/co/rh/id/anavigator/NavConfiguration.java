@@ -87,6 +87,21 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return saveStateDecryptCipher;
     }
 
+    /**
+     * Set cipher used in save state
+     *
+     * @param encrypt initialized cipher use to encrypt
+     * @param decrypt initialized cipher use to decrypt
+     * @throws NullPointerException if either encrypt or decrypt cipher is null
+     */
+    public void setSaveStateCipher(Cipher encrypt, Cipher decrypt) {
+        if (encrypt == null || decrypt == null) {
+            throw new NullPointerException("Encrypt and Decrypt ciphers MUST NOT NULL");
+        }
+        saveStateEncryptCipher = encrypt;
+        saveStateDecryptCipher = decrypt;
+    }
+
     public static class Builder<ACT extends Activity, SV extends StatefulView> {
         private String initialRouteName;
         private Map<String, StatefulViewFactory<ACT, SV>> navMap;
