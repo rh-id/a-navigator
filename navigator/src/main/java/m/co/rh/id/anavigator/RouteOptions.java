@@ -1,8 +1,11 @@
 package m.co.rh.id.anavigator;
 
-import java.io.Serializable;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
-public class RouteOptions implements Serializable {
+public class RouteOptions implements Externalizable {
     /**
      * Helper method to setup in and out animation for transition.
      *
@@ -45,5 +48,51 @@ public class RouteOptions implements Serializable {
 
     public Integer getPopExitAnimationResId() {
         return popExitAnimationResId;
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        int nullInt = -1;
+        if (enterAnimationResId != null) {
+            out.writeInt(enterAnimationResId);
+        } else {
+            out.writeInt(nullInt);
+        }
+        if (exitAnimationResId != null) {
+            out.writeInt(exitAnimationResId);
+        } else {
+            out.writeInt(nullInt);
+        }
+        if (popEnterAnimationResId != null) {
+            out.writeInt(popEnterAnimationResId);
+        } else {
+            out.writeInt(nullInt);
+        }
+        if (popExitAnimationResId != null) {
+            out.writeInt(popExitAnimationResId);
+        } else {
+            out.writeInt(nullInt);
+        }
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException {
+        int nullInt = -1;
+        int tempIn = in.readInt();
+        if (tempIn != nullInt) {
+            enterAnimationResId = tempIn;
+        }
+        tempIn = in.readInt();
+        if (tempIn != nullInt) {
+            exitAnimationResId = tempIn;
+        }
+        tempIn = in.readInt();
+        if (tempIn != nullInt) {
+            popEnterAnimationResId = tempIn;
+        }
+        tempIn = in.readInt();
+        if (tempIn != nullInt) {
+            popExitAnimationResId = tempIn;
+        }
     }
 }

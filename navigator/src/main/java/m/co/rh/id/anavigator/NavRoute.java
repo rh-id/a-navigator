@@ -1,20 +1,32 @@
 package m.co.rh.id.anavigator;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.io.Serializable;
 
 import m.co.rh.id.anavigator.component.NavPopCallback;
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
 
 @SuppressWarnings("rawtypes")
-public class NavRoute implements Serializable {
-    private final StatefulViewFactory statefulViewFactory;
-    private final NavPopCallback navPopCallback;
-    private final RouteOptions routeOptions;
-    private final StatefulView statefulView;
-    private final String routeName;
-    private final Serializable routeArgs;
-    private final String routeStateKey;
+public class NavRoute implements Externalizable {
+    private StatefulViewFactory statefulViewFactory;
+    private NavPopCallback navPopCallback;
+    private RouteOptions routeOptions;
+    private StatefulView statefulView;
+    private String routeName;
+    private Serializable routeArgs;
+    private String routeStateKey;
     private Serializable routeResult;
+
+    /**
+     * Do not use this in production.
+     * This constructor is meant for serialization purpose only.
+     */
+    public NavRoute() {
+        // leave blank
+    }
 
     NavRoute(StatefulViewFactory statefulViewFactory,
              NavPopCallback navPopCallback,
@@ -77,5 +89,29 @@ public class NavRoute implements Serializable {
 
     void setRouteResult(Serializable routeResult) {
         this.routeResult = routeResult;
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(statefulViewFactory);
+        out.writeObject(navPopCallback);
+        out.writeObject(routeOptions);
+        out.writeObject(statefulView);
+        out.writeObject(routeName);
+        out.writeObject(routeArgs);
+        out.writeObject(routeStateKey);
+        out.writeObject(routeResult);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws ClassNotFoundException, IOException {
+        statefulViewFactory = (StatefulViewFactory) in.readObject();
+        navPopCallback = (NavPopCallback) in.readObject();
+        routeOptions = (RouteOptions) in.readObject();
+        statefulView = (StatefulView) in.readObject();
+        routeName = (String) in.readObject();
+        routeArgs = (Serializable) in.readObject();
+        routeStateKey = (String) in.readObject();
+        routeResult = (Serializable) in.readObject();
     }
 }
