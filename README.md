@@ -21,6 +21,8 @@ If you are not planning to use save state then it should be fine.
 
 ## Example Usage
 
+For example usage ![see project example](https://github.com/rh-id/a-navigator/tree/master/example), for example production app see ![a-news-provider](https://github.com/rh-id/a-news-provider)
+
 This project support jitpack, in order to use this, you need to add jitpack to your project root build.gradle:
 ```
 allprojects {
