@@ -600,6 +600,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                         ((NavActivityLifecycle) statefulView).onPause(mActivity);
                     }
                 }
+                mNavSnapshotHandler.saveState(mNavRouteStack);
             }
             // handle view navigator
             if (!mViewNavigatorList.isEmpty()) {
