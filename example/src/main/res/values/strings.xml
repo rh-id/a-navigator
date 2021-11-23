@@ -31,4 +31,5 @@
     <string name="rebuild_view_from_count_value">Rebuild View from Count Value</string>
     <string name="bottom_page_1">Bottom Page 1</string>
     <string name="bottom_page_2">Bottom Page 2</string>
+    <string name="rebuild_view_from_pattern">Rebuild view from pattern</string>
 </resources>

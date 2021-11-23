@@ -8,14 +8,21 @@ import android.widget.Toast;
 
 import com.google.android.material.button.MaterialButton;
 
+import java.util.UUID;
+
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.RequireNavigator;
+import m.co.rh.id.anavigator.example.PageKeys;
 import m.co.rh.id.anavigator.example.R;
 
 public class Bottom1Page extends StatefulView<Activity> implements RequireNavigator {
     private transient INavigator mNavigator;
     private int counter;
+
+    public Bottom1Page() {
+        super(PageKeys.BOTTOM_PAGE + "-1-" + UUID.randomUUID().toString());
+    }
 
     @Override
     public void provideNavigator(INavigator navigator) {

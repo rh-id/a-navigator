@@ -40,4 +40,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/button_return" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/button_rebuild_pattern_bottom_page"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/rebuild_view_from_pattern"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/button_rebuild" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

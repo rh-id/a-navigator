@@ -3,6 +3,7 @@ package m.co.rh.id.anavigator.component;
 import android.content.Intent;
 
 import java.io.Serializable;
+import java.util.regex.Pattern;
 
 import m.co.rh.id.anavigator.NavConfiguration;
 import m.co.rh.id.anavigator.NavRoute;
@@ -124,6 +125,13 @@ public interface INavigator {
      * @throws NavigationRouteNotFound if route specified by routeIndex not found
      */
     void reBuildRoute(int routeIndex);
+
+    /**
+     * Rebuild a route where StatefulView.key string contains the pattern.
+     *
+     * @param pattern to be matched with StatefulView.key
+     */
+    void reBuildRoute(Pattern pattern);
 
     /**
      * Rebuild all route, start from initial route.

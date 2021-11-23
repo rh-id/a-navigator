@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
 import javax.crypto.SealedObject;
@@ -346,6 +348,23 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
+        }
+    }
+
+    @Override
+    public void reBuildRoute(Pattern pattern) {
+        if (pattern != null) {
+            if (!mNavRouteStack.isEmpty()) {
+                for (int i = mNavRouteStack.size() - 1, routeIndex = 0;
+                     i >= 0;
+                     i--, routeIndex++) {
+                    String input = mNavRouteStack.get(i).getRouteStateKey();
+                    Matcher m = pattern.matcher(input);
+                    if (m.find()) {
+                        reBuildRoute(routeIndex);
+                    }
+                }
+            }
         }
     }
 
