@@ -357,24 +357,38 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         mIsNavigating = true;
         int lastIndex = mNavRouteStack.size() - 1;
-        int selectedNavRouteIndex = lastIndex - routeIndex;
-        int selectedViewIndex = routeIndex;
-        NavRoute navRoute = mNavRouteStack.get(selectedNavRouteIndex);
-        ViewAnimator viewAnimator = getViewAnimator();
-        View childView = viewAnimator.getChildAt(selectedViewIndex);
-        View currentView = viewAnimator.getCurrentView();
-        View buildView = navRoute.getStatefulView().buildView(getActivity(), viewAnimator);
-        viewAnimator.setInAnimation(null);
-        viewAnimator.setOutAnimation(null);
-        viewAnimator.removeViewAt(selectedViewIndex);
-        viewAnimator.addView(buildView, selectedViewIndex);
-        if (childView == currentView) {
-            // animate only when current view is showing
-            viewAnimator.setInAnimation(mNavConfiguration.getDefaultReBuildEnterAnimation());
-            viewAnimator.setOutAnimation(mNavConfiguration.getDefaultReBuildExitAnimation());
-            viewAnimator.setDisplayedChild(selectedViewIndex);
+        NavRoute navRoute = mNavRouteStack.get(lastIndex - routeIndex);
+        StatefulView statefulView = navRoute.getStatefulView();
+        if (statefulView instanceof StatefulViewDialog) {
+            StatefulViewDialog statefulViewDialog = (StatefulViewDialog) statefulView;
+            statefulViewDialog.dismissWithoutPop(getActivity());
+            statefulViewDialog.initDialog(getActivity());
+            checkAndShowDialog();
+        } else {
+            ViewAnimator viewAnimator = getViewAnimator();
+            int selectedIndex = routeIndex;
+            // check and calculate previous route, how many dialog?
+            for (int i = lastIndex - routeIndex; i <= lastIndex; i++) {
+                NavRoute navRoute1 = mNavRouteStack.get(i);
+                if (navRoute1.getStatefulView() instanceof StatefulViewDialog) {
+                    selectedIndex--;
+                }
+            }
+            View childView = viewAnimator.getChildAt(selectedIndex);
+            View currentView = viewAnimator.getCurrentView();
+            View buildView = navRoute.getStatefulView().buildView(getActivity(), viewAnimator);
+            viewAnimator.setInAnimation(null);
+            viewAnimator.setOutAnimation(null);
+            viewAnimator.removeViewAt(selectedIndex);
+            viewAnimator.addView(buildView, selectedIndex);
+            if (childView == currentView) {
+                // animate only when current view is showing
+                viewAnimator.setInAnimation(mNavConfiguration.getDefaultReBuildEnterAnimation());
+                viewAnimator.setOutAnimation(mNavConfiguration.getDefaultReBuildExitAnimation());
+                viewAnimator.setDisplayedChild(selectedIndex);
+            }
+            initViewNavigator();
         }
-        initViewNavigator();
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
