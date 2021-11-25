@@ -55,6 +55,8 @@ public abstract class StatefulView<ACT extends Activity> implements Serializable
 
     /**
      * Build new view instance and return it,
+     *
+     * @return view from {@link #createView(Activity, ViewGroup)}
      */
     public final View buildView(ACT activity, ViewGroup container) {
         initialize(activity);
@@ -70,11 +72,14 @@ public abstract class StatefulView<ACT extends Activity> implements Serializable
     }
 
     /**
-     * Create new view, don't call this method directly, call {@link #buildView(Activity, ViewGroup)} instead
+     * Create new view, don't call this method directly, call {@link #buildView(Activity, ViewGroup)} instead.
      */
     protected abstract View createView(ACT activity, ViewGroup container);
 
-    private void initialize(ACT activity) {
+    /**
+     * Initialize this stateful view
+     */
+    public final void initialize(ACT activity) {
         if (!mIsInitialized) {
             mIsInitialized = true;
             initState(activity);

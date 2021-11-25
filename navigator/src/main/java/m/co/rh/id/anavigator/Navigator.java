@@ -150,20 +150,30 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
-        SV statefulView = (SV) statefulViewFactory.newInstance(args, mActivity);
         NavRoute currentRoute = mNavRouteStack.peek();
-        NavRoute newRoute = new NavRoute(statefulViewFactory, navPopCallback, routeOptions, statefulView, routeName, args, statefulView.getKey());
-        // push must be done before initState or buildView so that the statefulView could get route information
-        mNavRouteStack.push(newRoute);
-        if (statefulView instanceof RequireNavigator) {
-            ((RequireNavigator) statefulView).provideNavigator(this);
+        if (currentRoute != null) {
+            StatefulView currentRouteStatefulView = currentRoute.getStatefulView();
+            if (currentRouteStatefulView instanceof StatefulViewDialog) {
+                ((StatefulViewDialog) currentRouteStatefulView).hideDialog(getActivity());
+            }
         }
-        ViewAnimator existingViewAnimator = getViewAnimator();
-        View view = statefulView.buildView(mActivity, existingViewAnimator);
-        existingViewAnimator.addView(view);
-        existingViewAnimator.showNext();
-        // try to init view navigator everytime new route is pushed
-        initViewNavigator();
+        SV newRouteStatefulView = (SV) statefulViewFactory.newInstance(args, mActivity);
+        NavRoute newRoute = new NavRoute(statefulViewFactory, navPopCallback, routeOptions, newRouteStatefulView, routeName, args, newRouteStatefulView.getKey());
+        // push must be done before initState or buildView so that the newRouteStatefulView could get route information
+        mNavRouteStack.push(newRoute);
+        if (newRouteStatefulView instanceof RequireNavigator) {
+            ((RequireNavigator) newRouteStatefulView).provideNavigator(this);
+        }
+        if (newRouteStatefulView instanceof StatefulViewDialog) {
+            ((StatefulViewDialog) newRouteStatefulView).showDialog(getActivity());
+        } else {
+            ViewAnimator existingViewAnimator = getViewAnimator();
+            View view = newRouteStatefulView.buildView(mActivity, existingViewAnimator);
+            existingViewAnimator.addView(view);
+            existingViewAnimator.showNext();
+            // try to init view navigator everytime new route is pushed
+            initViewNavigator();
+        }
         onRouteChanged(currentRoute, newRoute);
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
@@ -195,15 +205,21 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         mIsNavigating = true;
         if (mNavRouteStack.size() > 1) {
-            ViewAnimator existingViewAnimator = getViewAnimator();
-            // check for route options
-            View currentView = existingViewAnimator.getCurrentView();
-            existingViewAnimator.showPrevious();
-            // Try reset view navigator before pop
-            resetViewNavigator(currentView);
-            // cont pop
-            popStack(existingViewAnimator.getCurrentView(), result);
-            existingViewAnimator.removeView(currentView);
+            NavRoute currentRoute = mNavRouteStack.peek();
+            StatefulView currentRouteStatefulView = currentRoute.getStatefulView();
+            if (currentRouteStatefulView instanceof StatefulViewDialog) {
+                popStack(null, result);
+            } else {
+                ViewAnimator existingViewAnimator = getViewAnimator();
+                // check for route options
+                View currentView = existingViewAnimator.getCurrentView();
+                existingViewAnimator.showPrevious();
+                // Try reset view navigator before pop
+                resetViewNavigator(currentView);
+                // cont pop
+                popStack(existingViewAnimator.getCurrentView(), result);
+                existingViewAnimator.removeView(currentView);
+            }
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
                 mPendingNavigatorRoute.pop().run();
@@ -520,12 +536,21 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             int last = mNavRouteStack.size() - 1;
             for (int i = last; i >= 0; i--) {
                 NavRoute navRoute = mNavRouteStack.get(i);
-                viewAnimator.addView(navRoute
-                        .getStatefulView()
-                        .buildView(mActivity, viewAnimator)
-                );
+                StatefulView statefulView = navRoute
+                        .getStatefulView();
+                if (statefulView instanceof StatefulViewDialog) {
+                    ((StatefulViewDialog) statefulView).initDialog(getActivity());
+                } else {
+                    viewAnimator.addView(statefulView
+                            .buildView(mActivity, viewAnimator)
+                    );
+                }
             }
-            viewAnimator.setDisplayedChild(last);
+            StatefulView currentStatefulView = mNavRouteStack.peek().getStatefulView();
+            if (currentStatefulView instanceof StatefulViewDialog) {
+                ((StatefulViewDialog) currentStatefulView).showDialog(getActivity());
+            }
+            viewAnimator.setDisplayedChild(viewAnimator.getChildCount() - 1);
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
                 mPendingNavigatorRoute.pop().run();

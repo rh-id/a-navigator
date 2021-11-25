@@ -22,6 +22,7 @@ import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.component.RequireNavigator;
+import m.co.rh.id.anavigator.example.dialog.DialogHomePage;
 
 
 public class HomePage extends StatefulView<Activity> implements RequireNavigator, NavOnBackPressed, NavOnActivityResult {
@@ -88,6 +89,8 @@ public class HomePage extends StatefulView<Activity> implements RequireNavigator
                         ));
             } else if (itemId == R.id.nav_bottom_home) {
                 mNavigator.push(Routes.BOTTOM_NAV_PAGE);
+            } else if (itemId == R.id.nav_dialog_home) {
+                mNavigator.push((args, activity1) -> new DialogHomePage());
             }
             return false;
         });

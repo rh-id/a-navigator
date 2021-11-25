@@ -20,5 +20,9 @@
             android:id="@+id/nav_bottom_home"
             android:icon="@drawable/ic_menu_camera"
             android:title="@string/bottomviewnavigator_page" />
+        <item
+            android:id="@+id/nav_dialog_home"
+            android:icon="@drawable/ic_menu_camera"
+            android:title="@string/menu_dialog_home_page" />
     </group>
 </menu>
