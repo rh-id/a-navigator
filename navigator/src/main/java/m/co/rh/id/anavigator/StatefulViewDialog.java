@@ -75,7 +75,10 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
     final void dismissWithoutPop(ACT activity) {
         mShouldPop = false;
         Dialog dialog = initDialog(activity);
-        dialog.dismiss();
+        if (dialog.isShowing()) {
+            dialog.dismiss();
+        }
+        mActiveDialog = null;
     }
 
     @Override
@@ -98,6 +101,10 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
 
     protected void onCancelDialog(DialogInterface dialog) {
         // leave blank
+    }
+
+    protected INavigator getNavigator() {
+        return mNavigator;
     }
 
     @Override

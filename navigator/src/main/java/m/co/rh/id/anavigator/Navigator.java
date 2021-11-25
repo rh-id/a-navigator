@@ -150,13 +150,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
+        checkAndDismissDialog();
         NavRoute currentRoute = mNavRouteStack.peek();
-        if (currentRoute != null) {
-            StatefulView currentRouteStatefulView = currentRoute.getStatefulView();
-            if (currentRouteStatefulView instanceof StatefulViewDialog) {
-                ((StatefulViewDialog) currentRouteStatefulView).dismissWithoutPop(getActivity());
-            }
-        }
         SV newRouteStatefulView = (SV) statefulViewFactory.newInstance(args, mActivity);
         NavRoute newRoute = new NavRoute(statefulViewFactory, navPopCallback, routeOptions, newRouteStatefulView, routeName, args, newRouteStatefulView.getKey());
         // push must be done before initState or buildView so that the newRouteStatefulView could get route information
@@ -219,6 +214,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 // cont pop
                 popStack(existingViewAnimator.getCurrentView(), result);
                 existingViewAnimator.removeView(currentView);
+                checkAndShowDialog();
             }
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
@@ -240,6 +236,24 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mIsNavigating = false;
         }
         return false;
+    }
+
+    private void checkAndDismissDialog() {
+        if (!mNavRouteStack.isEmpty()) {
+            StatefulView currentStatefulView = mNavRouteStack.peek().getStatefulView();
+            if (currentStatefulView instanceof StatefulViewDialog) {
+                ((StatefulViewDialog) currentStatefulView).dismissWithoutPop(getActivity());
+            }
+        }
+    }
+
+    private void checkAndShowDialog() {
+        if (!mNavRouteStack.isEmpty()) {
+            StatefulView currentStatefulView = mNavRouteStack.peek().getStatefulView();
+            if (currentStatefulView instanceof StatefulViewDialog) {
+                ((StatefulViewDialog) currentStatefulView).showDialog(getActivity());
+            }
+        }
     }
 
     @Override
@@ -394,13 +408,20 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         ViewAnimator newViewAnimator = createViewAnimator(mActivity, mViewAnimatorId, mNavConfiguration);
         for (int i = mNavRouteStack.size() - 1; i >= 0; i--) {
             NavRoute navRoute = mNavRouteStack.get(i);
-            View view = navRoute.getStatefulView().buildView(mActivity, newViewAnimator);
-            newViewAnimator.addView(view);
+            StatefulView statefulView = navRoute.getStatefulView();
+            if (statefulView instanceof StatefulViewDialog) {
+                ((StatefulViewDialog) statefulView).initDialog(getActivity());
+            } else {
+                View view = statefulView.buildView(mActivity, newViewAnimator);
+                newViewAnimator.addView(view);
+            }
         }
-        newViewAnimator.setDisplayedChild(mNavRouteStack.size() - 1);
+        newViewAnimator.setDisplayedChild(newViewAnimator.getChildCount() - 1);
         getViewAnimator().startAnimation(mNavConfiguration.getDefaultReBuildExitAnimation());
         setViewAnimator(mActivity, newViewAnimator);
         newViewAnimator.startAnimation(mNavConfiguration.getDefaultReBuildEnterAnimation());
+        checkAndDismissDialog();
+        checkAndShowDialog();
         initViewNavigator();
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
@@ -620,10 +641,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                         ((NavActivityLifecycle) statefulView).onResume(mActivity);
                     }
                 }
-                StatefulView currentStatefulView = mNavRouteStack.peek().getStatefulView();
-                if (currentStatefulView instanceof StatefulViewDialog) {
-                    ((StatefulViewDialog) currentStatefulView).showDialog(getActivity());
-                }
+                checkAndShowDialog();
             }
             // handle view navigator
             if (!mViewNavigatorList.isEmpty()) {
@@ -644,10 +662,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                         ((NavActivityLifecycle) statefulView).onPause(mActivity);
                     }
                 }
-                StatefulView currentStatefulView = mNavRouteStack.peek().getStatefulView();
-                if (currentStatefulView instanceof StatefulViewDialog) {
-                    ((StatefulViewDialog) currentStatefulView).dismissWithoutPop(getActivity());
-                }
+                checkAndDismissDialog();
                 mNavSnapshotHandler.saveState(mNavRouteStack);
             }
             // handle view navigator

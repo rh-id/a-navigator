@@ -8,7 +8,7 @@
         android:id="@+id/text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="This is dialog 1 page"
+        android:text="This is dialog 2 page"
         android:textSize="24sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -33,10 +33,10 @@
         app:layout_constraintTop_toBottomOf="@id/text_view_count" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/button_show_page_1"
+        android:id="@+id/button_rebuild_all"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Show Page 1"
+        android:text="Rebuild All Route"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/button_count" />
