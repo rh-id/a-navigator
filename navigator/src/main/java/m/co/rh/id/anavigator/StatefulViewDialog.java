@@ -7,7 +7,6 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import m.co.rh.id.anavigator.component.INavigator;
-import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.RequireNavigator;
 
 /**
@@ -16,7 +15,10 @@ import m.co.rh.id.anavigator.component.RequireNavigator;
  * Override {@link #createDialog(Activity)} if custom dialog is needed,
  * no need to override {@link #createView(Activity, ViewGroup)} if you decide to override this.
  */
-public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT> implements RequireNavigator, NavActivityLifecycle<ACT>, DialogInterface.OnDismissListener, DialogInterface.OnCancelListener, DialogInterface.OnShowListener {
+public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
+        implements RequireNavigator,
+        DialogInterface.OnDismissListener, DialogInterface.OnCancelListener,
+        DialogInterface.OnShowListener {
 
     private transient INavigator mNavigator;
     private transient Dialog mActiveDialog;
@@ -70,11 +72,10 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT> 
         }
     }
 
-    final void hideDialog(ACT activity) {
+    final void dismissWithoutPop(ACT activity) {
+        mShouldPop = false;
         Dialog dialog = initDialog(activity);
-        if (dialog.isShowing()) {
-            dialog.hide();
-        }
+        dialog.dismiss();
     }
 
     @Override
@@ -116,19 +117,5 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT> 
     public void onShow(DialogInterface dialog) {
         mShouldPop = true;
         onShowDialog(dialog);
-    }
-
-    @Override
-    public void onResume(ACT activity) {
-        // leave blank
-    }
-
-    @Override
-    public void onPause(ACT activity) {
-        if (mActiveDialog != null) {
-            mShouldPop = false;
-            mActiveDialog.dismiss();
-            mActiveDialog = null;
-        }
     }
 }
