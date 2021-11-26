@@ -36,6 +36,8 @@ public class Dialog2Page extends StatefulViewDialog<Activity> {
                 Toast.makeText(activity, "Route not found: " + ex.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
+        Button buttonRetry = view.findViewById(R.id.button_retry);
+        buttonRetry.setOnClickListener(v -> getNavigator().retry());
         Toast.makeText(activity, "Dialog page 2 createView", Toast.LENGTH_LONG).show();
         return view;
     }

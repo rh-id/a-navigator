@@ -317,14 +317,19 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             return;
         }
         mIsNavigating = true;
-        ViewAnimator existingViewAnimator = getViewAnimator();
-        View currentView = existingViewAnimator.getCurrentView();
-        NavRoute currentNavRoute = mNavRouteStack.pop();
+        NavRoute currentNavRoute = mNavRouteStack.peek();
         StatefulView statefulView = currentNavRoute.getStatefulView();
-        if (statefulView != null) {
+        if (statefulView instanceof StatefulViewDialog) {
+            StatefulViewDialog statefulViewDialog = ((StatefulViewDialog) statefulView);
+            statefulViewDialog.dismissWithoutPop(getActivity());
+            statefulViewDialog.dispose(getActivity());
+        } else {
             statefulView.dispose(mActivity);
+            ViewAnimator existingViewAnimator = getViewAnimator();
+            View currentView = existingViewAnimator.getCurrentView();
+            existingViewAnimator.removeView(currentView);
         }
-        existingViewAnimator.removeView(currentView);
+        mNavRouteStack.pop();
         push(currentNavRoute.getStatefulViewFactory(),
                 currentNavRoute.getRouteName(),
                 overrideArgs,
