@@ -23,7 +23,7 @@ public class DialogHomePage extends StatefulView<Activity> implements RequireNav
     protected View createView(Activity activity, ViewGroup container) {
         View view = activity.getLayoutInflater().inflate(R.layout.page_dialog_home, container, false);
         Button dialog1Button = view.findViewById(R.id.button_show_dialog_1);
-        dialog1Button.setOnClickListener(v -> mNavigator.push((args, activity1) -> new Dialog1Page()));
+        dialog1Button.setOnClickListener(v -> mNavigator.push((args, activity1) -> new Dialog1Page(mNavigator)));
         return view;
     }
 }

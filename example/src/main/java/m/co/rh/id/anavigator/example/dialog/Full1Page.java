@@ -35,7 +35,7 @@ public class Full1Page extends StatefulView<Activity> implements RequireNavigato
         });
         Button buttonShowDialog2 = view.findViewById(R.id.button_show_dialog_2);
         buttonShowDialog2.setOnClickListener(v ->
-                mNavigator.push((args, activity1) -> new Dialog2Page()));
+                mNavigator.push((args, activity1) -> new Dialog2Page(mNavigator)));
         Toast.makeText(activity, "Dialog Full page 1 createView", Toast.LENGTH_LONG).show();
         return view;
     }

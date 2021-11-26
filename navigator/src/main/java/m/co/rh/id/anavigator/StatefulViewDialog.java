@@ -24,6 +24,10 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
     private transient Dialog mActiveDialog;
     private transient boolean mShouldPop;
 
+    public StatefulViewDialog(INavigator navigator) {
+        mNavigator = navigator;
+    }
+
     @Override
     public void provideNavigator(INavigator navigator) {
         mNavigator = navigator;
