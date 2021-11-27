@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -12,8 +15,8 @@ import java.util.UUID;
  * NOTE: Always call super implementation when extending this.
  */
 public abstract class StatefulView<ACT extends Activity> implements Serializable {
-    private boolean mIsInitialized;
-    private final String mKey;
+    private Boolean mIsInitialized;
+    private String mKey;
 
     public StatefulView() {
         this(null);
@@ -28,6 +31,7 @@ public abstract class StatefulView<ACT extends Activity> implements Serializable
         mKey = key == null ? this.getClass().getName() + "-StatefulViewClassKey-" +
                 UUID.randomUUID().toString()
                 : key;
+        mIsInitialized = false;
     }
 
     /**
@@ -42,7 +46,7 @@ public abstract class StatefulView<ACT extends Activity> implements Serializable
     /**
      * @return true if this has been initialized, false otherwise
      */
-    public final boolean isInitialized() {
+    public boolean isInitialized() {
         return mIsInitialized;
     }
 
@@ -84,5 +88,23 @@ public abstract class StatefulView<ACT extends Activity> implements Serializable
             mIsInitialized = true;
             initState(activity);
         }
+    }
+
+    /**
+     * Implementation of Externalizable, call this if sub-class implements Externalizable
+     * to handle this parent class externalization
+     */
+    protected void writeExternal(ObjectOutput objectOutput) throws IOException {
+        objectOutput.writeObject(mIsInitialized);
+        objectOutput.writeObject(mKey);
+    }
+
+    /**
+     * Implementation of Externalizable, call this if sub-class implements Externalizable
+     * to handle this parent class externalization
+     */
+    protected void readExternal(ObjectInput objectInput) throws ClassNotFoundException, IOException {
+        mIsInitialized = (Boolean) objectInput.readObject();
+        mKey = (String) objectInput.readObject();
     }
 }

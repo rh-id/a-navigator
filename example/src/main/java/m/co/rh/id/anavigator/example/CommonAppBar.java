@@ -5,19 +5,33 @@ import android.graphics.Color;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.widget.Toolbar;
+
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.RequireNavigator;
 
-public class CommonAppBar extends StatefulView<Activity> implements RequireNavigator {
+public class CommonAppBar extends StatefulView<Activity> implements RequireNavigator, Externalizable {
 
     private transient INavigator mNavigator;
     private String mTitle;
     private transient View.OnClickListener mNavigationOnClickListener;
-    private int mBackgroundColor;
-    private boolean mIsInitialRoute;
+    private Integer mBackgroundColor;
+    private Boolean mIsInitialRoute;
+
+    /**
+     * Used for Externalizable only
+     */
+    @Deprecated
+    @VisibleForTesting
+    public CommonAppBar() {
+    }
 
     public CommonAppBar(INavigator navigator) {
         mNavigator = navigator;
@@ -64,5 +78,21 @@ public class CommonAppBar extends StatefulView<Activity> implements RequireNavig
 
     public void setBackgroundColor(int backgroundColor) {
         mBackgroundColor = backgroundColor;
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        super.writeExternal(out);
+        out.writeObject(mTitle);
+        out.writeObject(mBackgroundColor);
+        out.writeObject(mIsInitialRoute);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws ClassNotFoundException, IOException {
+        super.readExternal(in);
+        mTitle = (String) in.readObject();
+        mBackgroundColor = (Integer) in.readObject();
+        mIsInitialRoute = (Boolean) in.readObject();
     }
 }
