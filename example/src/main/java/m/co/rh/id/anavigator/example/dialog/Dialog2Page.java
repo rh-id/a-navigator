@@ -43,6 +43,8 @@ public class Dialog2Page extends StatefulViewDialog<Activity> {
         });
         Button buttonRetry = view.findViewById(R.id.button_retry);
         buttonRetry.setOnClickListener(v -> getNavigator().retry());
+        Button buttonDismis = view.findViewById(R.id.button_dismiss);
+        buttonDismis.setOnClickListener(v -> getNavigator().pop());
         Toast.makeText(activity, "Dialog page 2 createView", Toast.LENGTH_LONG).show();
         return view;
     }

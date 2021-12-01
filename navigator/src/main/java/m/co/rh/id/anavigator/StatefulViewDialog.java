@@ -89,6 +89,7 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
     public void dispose(ACT activity) {
         super.dispose(activity);
         if (mActiveDialog != null) {
+            mShouldPop = false;
             mActiveDialog.dismiss();
         }
         mActiveDialog = null;
