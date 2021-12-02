@@ -31,6 +31,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private File saveStateFile;
     private Cipher saveStateEncryptCipher;
     private Cipher saveStateDecryptCipher;
+    private Object requiredComponent;
 
     private NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
         if (initialRouteName == null) {
@@ -87,6 +88,10 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return saveStateDecryptCipher;
     }
 
+    public Object getRequiredComponent() {
+        return requiredComponent;
+    }
+
     /**
      * Set cipher used in save state
      *
@@ -114,6 +119,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         private File saveStateFile;
         private Cipher saveStateEncryptCipher;
         private Cipher saveStateDecryptCipher;
+        private Object requiredComponent;
 
         /**
          * @param initialRouteName initial route to be pushed to navigator
@@ -185,6 +191,14 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             return this;
         }
 
+        /**
+         * Set required component to be injected on StatefulViews that implements RequireComponent
+         */
+        public Builder setRequiredComponent(Object component) {
+            this.requiredComponent = component;
+            return this;
+        }
+
         public NavConfiguration<ACT, SV> build() {
             NavConfiguration<ACT, SV> navConfiguration = new NavConfiguration<>(initialRouteName, navMap);
             if (enterAnimation == null) {
@@ -241,6 +255,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
                 navConfiguration.saveStateEncryptCipher = saveStateEncryptCipher;
                 navConfiguration.saveStateDecryptCipher = saveStateDecryptCipher;
             }
+            navConfiguration.requiredComponent = requiredComponent;
             return navConfiguration;
         }
     }

@@ -42,6 +42,7 @@ import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.component.NavOnRouteChangedListener;
 import m.co.rh.id.anavigator.component.NavPopCallback;
+import m.co.rh.id.anavigator.component.RequireComponent;
 import m.co.rh.id.anavigator.component.RequireNavRoute;
 import m.co.rh.id.anavigator.component.RequireNavigator;
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
@@ -243,6 +244,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         if (statefulView instanceof RequireNavRoute) {
             ((RequireNavRoute) statefulView).provideNavRoute(navRoute);
+        }
+        if (statefulView instanceof RequireComponent) {
+            ((RequireComponent) statefulView)
+                    .provideComponent(mNavConfiguration.getRequiredComponent());
         }
     }
 
