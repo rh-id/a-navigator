@@ -42,6 +42,7 @@ import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.component.NavOnRouteChangedListener;
 import m.co.rh.id.anavigator.component.NavPopCallback;
+import m.co.rh.id.anavigator.component.RequireNavRoute;
 import m.co.rh.id.anavigator.component.RequireNavigator;
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
 import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
@@ -156,9 +157,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         NavRoute newRoute = new NavRoute(statefulViewFactory, navPopCallback, routeOptions, newRouteStatefulView, routeName, args, newRouteStatefulView.getKey());
         // push must be done before initState or buildView so that the newRouteStatefulView could get route information
         mNavRouteStack.push(newRoute);
-        if (newRouteStatefulView instanceof RequireNavigator) {
-            ((RequireNavigator) newRouteStatefulView).provideNavigator(this);
-        }
+        injectStatefulView(newRouteStatefulView, newRoute);
         if (newRouteStatefulView instanceof StatefulViewDialog) {
             ((StatefulViewDialog) newRouteStatefulView).showDialog(getActivity());
         } else {
@@ -236,6 +235,15 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mIsNavigating = false;
         }
         return false;
+    }
+
+    private void injectStatefulView(StatefulView statefulView, NavRoute navRoute) {
+        if (statefulView instanceof RequireNavigator) {
+            ((RequireNavigator) statefulView).provideNavigator(this);
+        }
+        if (statefulView instanceof RequireNavRoute) {
+            ((RequireNavRoute) statefulView).provideNavRoute(navRoute);
+        }
     }
 
     private void checkAndDismissDialog() {
@@ -560,9 +568,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             // re-inject navigator
             for (NavRoute navRoute : mNavRouteStack) {
                 StatefulView statefulView = navRoute.getStatefulView();
-                if (statefulView instanceof RequireNavigator) {
-                    ((RequireNavigator) statefulView).provideNavigator(this);
-                }
+                injectStatefulView(statefulView, navRoute);
             }
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
