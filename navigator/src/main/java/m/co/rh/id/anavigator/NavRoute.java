@@ -83,7 +83,7 @@ public class NavRoute implements Externalizable {
     /**
      * Current route result, can be null if no result or not yet set
      */
-    public Object getRouteResult() {
+    public Serializable getRouteResult() {
         return routeResult;
     }
 
