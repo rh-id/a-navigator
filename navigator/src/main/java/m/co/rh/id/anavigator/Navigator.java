@@ -157,7 +157,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         // push must be done before initState or buildView so that the newRouteStatefulView could get route information
         mNavRouteStack.push(newRoute);
         if (newRouteStatefulView instanceof RequireNavigator) {
-            ((RequireNavigator) newRouteStatefulView).provideNavigator(this);
+            ((RequireNavigator) newRouteStatefulView).provideNavigator(this, newRoute);
         }
         if (newRouteStatefulView instanceof StatefulViewDialog) {
             ((StatefulViewDialog) newRouteStatefulView).showDialog(getActivity());
@@ -561,7 +561,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             for (NavRoute navRoute : mNavRouteStack) {
                 StatefulView statefulView = navRoute.getStatefulView();
                 if (statefulView instanceof RequireNavigator) {
-                    ((RequireNavigator) statefulView).provideNavigator(this);
+                    ((RequireNavigator) statefulView).provideNavigator(this, navRoute);
                 }
             }
             mIsNavigating = false;
