@@ -23,18 +23,23 @@ import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.crypto.Cipher;
 import javax.crypto.SealedObject;
 
+import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
@@ -74,6 +79,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private final SnapshotHandler mNavSnapshotHandler;
     private final List<ViewNavigator> mViewNavigatorList;
     private final List<NavOnRouteChangedListener> mNavOnRouteChangedListenerList;
+    private final ExecutorService mExecutorService;
 
     /**
      * @param activityClass activity class that this navigator handles
@@ -90,6 +96,13 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mNavSnapshotHandler = new SnapshotHandler(navConfiguration);
         mViewNavigatorList = new ArrayList<>();
         mNavOnRouteChangedListenerList = new ArrayList<>();
+        int maxThread = Runtime.getRuntime().availableProcessors();
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
+                maxThread, maxThread, 30, TimeUnit.SECONDS
+                , new LinkedBlockingQueue<>());
+        threadPoolExecutor.allowCoreThreadTimeOut(true);
+        threadPoolExecutor.prestartAllCoreThreads();
+        mExecutorService = threadPoolExecutor;
     }
 
     @Override
@@ -248,6 +261,76 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (statefulView instanceof RequireComponent) {
             ((RequireComponent) statefulView)
                     .provideComponent(mNavConfiguration.getRequiredComponent());
+        }
+        if (mNavConfiguration.isEnableNavInject()) {
+            Field[] fields = statefulView.getClass().getDeclaredFields();
+            if (fields != null) {
+                List<Future> futures = new ArrayList<>();
+                for (Field field : fields) {
+                    futures.add(mExecutorService.submit(() -> {
+                        NavInject navInject = field.getAnnotation(NavInject.class);
+                        if (navInject != null) {
+                            Class fieldType = field.getType();
+                            if (fieldType.isAssignableFrom(INavigator.class)) {
+                                field.setAccessible(true);
+                                try {
+                                    field.set(statefulView, this);
+                                } catch (IllegalAccessException e) {
+                                    Log.e(TAG, "Failed to inject " + field.getName(), e);
+                                } finally {
+                                    field.setAccessible(false);
+                                }
+                            } else if (fieldType.isAssignableFrom(NavRoute.class)) {
+                                if (navRoute != null) {
+                                    field.setAccessible(true);
+                                    try {
+                                        field.set(statefulView, navRoute);
+                                    } catch (IllegalAccessException e) {
+                                        Log.e(TAG, "Failed to inject " + field.getName(), e);
+                                    } finally {
+                                        field.setAccessible(false);
+                                    }
+                                }
+                            } else if (mNavConfiguration.getRequiredComponent() != null) {
+                                if (fieldType.isAssignableFrom(mNavConfiguration.getRequiredComponent().getClass())) {
+                                    field.setAccessible(true);
+                                    try {
+                                        field.set(statefulView, mNavConfiguration.getRequiredComponent());
+                                    } catch (IllegalAccessException e) {
+                                        Log.e(TAG, "Failed to inject " + field.getName(), e);
+                                    } finally {
+                                        field.setAccessible(false);
+                                    }
+                                }
+                            } else if (fieldType.isAssignableFrom(StatefulView.class)) {
+                                field.setAccessible(true);
+                                try {
+                                    Object object = field.get(statefulView);
+                                    if (object != null && object instanceof StatefulView) {
+                                        injectStatefulView((StatefulView) object, navRoute);
+                                    }
+                                } catch (IllegalAccessException e) {
+                                    Log.e(TAG, "Failed to inject " + field.getName(), e);
+                                } finally {
+                                    field.setAccessible(false);
+                                }
+                            }
+                        }
+                    }));
+                }
+                while (!futures.isEmpty()) {
+                    boolean allDone = true;
+                    for (Future future : futures) {
+                        if (!future.isDone()) {
+                            allDone = false;
+                            break;
+                        }
+                    }
+                    if (allDone) {
+                        futures.clear();
+                    }
+                }
+            }
         }
     }
 

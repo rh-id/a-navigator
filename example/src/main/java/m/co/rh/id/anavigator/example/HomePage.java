@@ -2,6 +2,7 @@ package m.co.rh.id.anavigator.example;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
@@ -18,31 +19,38 @@ import java.io.Serializable;
 import m.co.rh.id.anavigator.Navigator;
 import m.co.rh.id.anavigator.RouteOptions;
 import m.co.rh.id.anavigator.StatefulView;
+import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
-import m.co.rh.id.anavigator.component.RequireNavigator;
+import m.co.rh.id.anavigator.example.component.ExampleComponent;
 import m.co.rh.id.anavigator.example.dialog.DialogHomePage;
 
 
-public class HomePage extends StatefulView<Activity> implements RequireNavigator, NavOnBackPressed, NavOnActivityResult {
+public class HomePage extends StatefulView<Activity> implements NavOnBackPressed, NavOnActivityResult {
     private static final int APPCOMPAT_ACTIVITY_REQUEST_CODE = 1;
+    private static final String TAG = HomePage.class.getName();
+
+    @NavInject
     private CommonAppBar mCommonAppBar;
+
+    @NavInject
     private transient INavigator mNavigator;
+
+    @NavInject
+    private transient ExampleComponent mExampleComponent;
+
     public boolean isDrawerOpen;
 
     @Override
-    public void provideNavigator(INavigator navigator) {
-        mNavigator = navigator;
-        if (mCommonAppBar == null) {
-            mCommonAppBar = new CommonAppBar(navigator);
-        } else {
-            mCommonAppBar.provideNavigator(navigator);
-        }
+    protected void initState(Activity activity) {
+        super.initState(activity);
+        mCommonAppBar = new CommonAppBar(mNavigator);
     }
 
     @Override
     protected View createView(Activity activity, ViewGroup container) {
+        Log.d(TAG, "createView example component: " + mExampleComponent);
         View view = activity.getLayoutInflater().inflate(R.layout.page_home, container, false);
         DrawerLayout drawerLayout = view.findViewById(R.id.drawer);
         drawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {

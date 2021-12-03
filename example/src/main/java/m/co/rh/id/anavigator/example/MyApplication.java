@@ -25,6 +25,7 @@ import m.co.rh.id.anavigator.example.bottomnavpage.Bottom1Page;
 import m.co.rh.id.anavigator.example.bottomnavpage.Bottom2Page;
 import m.co.rh.id.anavigator.example.bottomnavpage.BottomHomePage;
 import m.co.rh.id.anavigator.example.bottomnavpage.BottomNavHomePage;
+import m.co.rh.id.anavigator.example.component.ExampleComponent;
 
 public class MyApplication extends Application {
 
@@ -77,6 +78,7 @@ public class MyApplication extends Application {
             Log.e("MyApplication", "Failed setting encrypted navigator", throwable);
         }
 
+        navBuilder1.setRequiredComponent(new ExampleComponent("this is sample component"));
         NavConfiguration<RawActivity, StatefulView<Activity>> navConfiguration =
                 navBuilder1.build();
         Navigator<RawActivity, StatefulView<Activity>> navigator =

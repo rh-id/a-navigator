@@ -32,6 +32,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private Cipher saveStateEncryptCipher;
     private Cipher saveStateDecryptCipher;
     private Object requiredComponent;
+    private boolean enableNavInject;
 
     private NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
         if (initialRouteName == null) {
@@ -92,6 +93,10 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return requiredComponent;
     }
 
+    public boolean isEnableNavInject() {
+        return enableNavInject;
+    }
+
     /**
      * Set cipher used in save state
      *
@@ -120,6 +125,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         private Cipher saveStateEncryptCipher;
         private Cipher saveStateDecryptCipher;
         private Object requiredComponent;
+        private boolean enableNavInject = true;
 
         /**
          * @param initialRouteName initial route to be pushed to navigator
@@ -199,6 +205,22 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             return this;
         }
 
+        /**
+         * Decide whether to enable or disable @NavInject functionality.
+         * Default value is true which means enabled
+         * <p>
+         * Reflection can be slow especially in smartphone devices where resources sometimes limited.
+         * If you decide to disable this functionality you could manually use API INavigator.injectRequired,
+         * to manually inject the components into your reusable StatefulView.
+         * Or set manually by implementing RequireNavigator, RequireNavRoute, RequireComponent,
+         *
+         * @param enable true if enabled, false if disabled
+         */
+        public Builder setEnableNavInject(boolean enable) {
+            this.enableNavInject = enable;
+            return this;
+        }
+
         public NavConfiguration<ACT, SV> build() {
             NavConfiguration<ACT, SV> navConfiguration = new NavConfiguration<>(initialRouteName, navMap);
             if (enterAnimation == null) {
@@ -256,6 +278,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
                 navConfiguration.saveStateDecryptCipher = saveStateDecryptCipher;
             }
             navConfiguration.requiredComponent = requiredComponent;
+            navConfiguration.enableNavInject = enableNavInject;
             return navConfiguration;
         }
     }

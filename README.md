@@ -158,3 +158,76 @@ public class MainActivity extends Activity {
     }
 }
 ```
+This framework also support injection by annotating fields with `@NavInject`
+```
+public class HomePage extends StatefulView<Activity> {
+
+    // navigator will be injected before initState is being called
+    @NavInject
+    private transient INavigator mNavigator;
+
+    @NavInject
+    private StatefulView mReuseStatefulView;
+
+    // this can be injected when setting up NavConfiguration with the required component
+    @NavInject
+    private transient MyGlobalComponent mMyGlobalComponent;
+
+    public HomePage(){
+        // still need to instantiate StatefulView manually,
+        // navigator will only inject if this StatefulView is not null
+        mReuseStatefulView = new ReuseStatefulView();
+    }
+
+    @Override
+    protected void initState(Activity activity) {
+        // init your state here
+    }
+
+    @Override
+    protected View createView(Activity activity) {
+        // inflate and setup your view here
+        View view = activity.getLayoutInflater().inflate(R.layout.page_home, null, false);
+        return view;
+    }
+
+    @Override
+    public void dispose(Activity activity) {
+        // do cleanup when navigator pop this StatefulView from stack
+    }
+}
+```
+If you find that navigator seemed to cause slowness, try to disable `@NavInject` functionality and use `INavigator.injectRequired`,
+to manually inject the StatefulViews
+```
+public class MyApplication extends Application {
+
+    private Navigator<MainActivity, StatefulView<Activity>>
+                mainActivityNavigator;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Map<String, StatefulViewFactory<MainActivity, StatefulView<Activity>>> navMap = new HashMap<>();
+        // this is where you map all your StatefulView implementations
+        navMap.put("/", (args, activity) -> new HomePage());
+
+        // make sure to set initial route to home page which is "/"
+        NavConfiguration.Builder<MainActivity, StatefulView<Activity>> navBuilder = new NavConfiguration.Builder<>("/", navMap);
+
+        // set File to save state if you want navigator to save its state
+        navBuilder.setSaveStateFile(new File(getCacheDir(), "navigator1State"));
+
+        // disable @NavInject functionality
+        navBuilder.setEnableNavInject(false);
+    }
+
+    public Navigator
+        getNavigator(Activity activity) {
+            if (activity instanceof MainActivity) {
+                return mainActivityNavigator;
+            }
+            return null;
+        }
+}
+```
