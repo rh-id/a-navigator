@@ -79,7 +79,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private final SnapshotHandler mNavSnapshotHandler;
     private final List<ViewNavigator> mViewNavigatorList;
     private final List<NavOnRouteChangedListener> mNavOnRouteChangedListenerList;
-    private final ExecutorService mExecutorService;
+    private final ThreadPoolExecutor mThreadPool;
 
     /**
      * @param activityClass activity class that this navigator handles
@@ -97,12 +97,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mViewNavigatorList = new ArrayList<>();
         mNavOnRouteChangedListenerList = new ArrayList<>();
         int maxThread = Runtime.getRuntime().availableProcessors();
-        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
+        mThreadPool = new ThreadPoolExecutor(
                 maxThread, maxThread, 30, TimeUnit.SECONDS
                 , new LinkedBlockingQueue<>());
-        threadPoolExecutor.allowCoreThreadTimeOut(true);
-        threadPoolExecutor.prestartAllCoreThreads();
-        mExecutorService = threadPoolExecutor;
+        mThreadPool.allowCoreThreadTimeOut(true);
+        mThreadPool.prestartAllCoreThreads();
     }
 
     @Override
@@ -267,50 +266,73 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             if (fields != null) {
                 List<Future> futures = new ArrayList<>();
                 for (Field field : fields) {
-                    futures.add(mExecutorService.submit(() -> {
+                    futures.add(mThreadPool.submit(() -> {
                         NavInject navInject = field.getAnnotation(NavInject.class);
                         if (navInject != null) {
                             Class fieldType = field.getType();
+                            String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
                             if (fieldType.isAssignableFrom(INavigator.class)) {
+                                Log.v(TAG, "navigator injected: " + fieldType.getName() + " " + field.getName());
                                 field.setAccessible(true);
                                 try {
                                     field.set(statefulView, this);
                                 } catch (IllegalAccessException e) {
-                                    Log.e(TAG, "Failed to inject " + field.getName(), e);
+                                    Log.e(TAG, errorMessage, e);
                                 } finally {
                                     field.setAccessible(false);
                                 }
                             } else if (fieldType.isAssignableFrom(NavRoute.class)) {
+                                Log.v(TAG, "navRoute injected: " + fieldType.getName() + " " + field.getName());
                                 if (navRoute != null) {
                                     field.setAccessible(true);
                                     try {
                                         field.set(statefulView, navRoute);
                                     } catch (IllegalAccessException e) {
-                                        Log.e(TAG, "Failed to inject " + field.getName(), e);
+                                        Log.e(TAG, errorMessage, e);
                                     } finally {
                                         field.setAccessible(false);
                                     }
                                 }
-                            } else if (mNavConfiguration.getRequiredComponent() != null) {
-                                if (fieldType.isAssignableFrom(mNavConfiguration.getRequiredComponent().getClass())) {
-                                    field.setAccessible(true);
-                                    try {
-                                        field.set(statefulView, mNavConfiguration.getRequiredComponent());
-                                    } catch (IllegalAccessException e) {
-                                        Log.e(TAG, "Failed to inject " + field.getName(), e);
-                                    } finally {
-                                        field.setAccessible(false);
-                                    }
+                            } else if (mNavConfiguration.getRequiredComponent() != null && fieldType.isAssignableFrom(mNavConfiguration.getRequiredComponent().getClass())) {
+                                Log.v(TAG, "requiredComponent injected: " + fieldType.getName() + " " + field.getName());
+                                field.setAccessible(true);
+                                try {
+                                    field.set(statefulView, mNavConfiguration.getRequiredComponent());
+                                } catch (IllegalAccessException e) {
+                                    Log.e(TAG, errorMessage, e);
+                                } finally {
+                                    field.setAccessible(false);
                                 }
-                            } else if (fieldType.isAssignableFrom(StatefulView.class)) {
+                            } else if (StatefulView.class.isAssignableFrom(fieldType)) {
                                 field.setAccessible(true);
                                 try {
                                     Object object = field.get(statefulView);
-                                    if (object != null && object instanceof StatefulView) {
+                                    if (object instanceof StatefulView) {
+                                        Log.v(TAG, "statefulView injected: " + fieldType.getName() + " " + field.getName());
                                         injectStatefulView((StatefulView) object, navRoute);
                                     }
                                 } catch (IllegalAccessException e) {
-                                    Log.e(TAG, "Failed to inject " + field.getName(), e);
+                                    Log.e(TAG, errorMessage, e);
+                                } finally {
+                                    field.setAccessible(false);
+                                }
+                            } else if (Iterable.class.isAssignableFrom(fieldType)) {
+                                field.setAccessible(true);
+                                try {
+                                    Object object = field.get(statefulView);
+                                    Log.v(TAG, "trying inject iterable");
+                                    if (object instanceof Iterable) {
+                                        Iterable iterable = (Iterable) object;
+                                        for (Object statefulViewObj : iterable
+                                        ) {
+                                            if (statefulViewObj instanceof StatefulView && statefulViewObj != null) {
+                                                Log.v(TAG, "iterable injected: " + statefulViewObj);
+                                                injectStatefulView((StatefulView) statefulViewObj, navRoute);
+                                            }
+                                        }
+                                    }
+                                } catch (IllegalAccessException e) {
+                                    Log.e(TAG, errorMessage, e);
                                 } finally {
                                     field.setAccessible(false);
                                 }
@@ -328,6 +350,20 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                     }
                     if (allDone) {
                         futures.clear();
+                    } else {
+                        // deadlock gonna happen if max thread is 1,
+                        // AND when injecting nested StatefulView.
+                        // deadlock gonna happen as well if max thread is overwhelmed
+                        // by nested StatefulView.
+                        // So, if not yet done, steal task to avoid deadlock.
+                        try {
+                            Runnable runnable = mThreadPool.getQueue().poll();
+                            if (runnable != null) {
+                                runnable.run();
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error executing stolen task while injecting");
+                        }
                     }
                 }
             }

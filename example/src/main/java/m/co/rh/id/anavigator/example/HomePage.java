@@ -15,7 +15,10 @@ import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
+import m.co.rh.id.anavigator.NavRoute;
 import m.co.rh.id.anavigator.Navigator;
 import m.co.rh.id.anavigator.RouteOptions;
 import m.co.rh.id.anavigator.StatefulView;
@@ -23,7 +26,8 @@ import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
-import m.co.rh.id.anavigator.example.component.ExampleComponent;
+import m.co.rh.id.anavigator.example.component.ExampleInjectedStatefulView;
+import m.co.rh.id.anavigator.example.component.IExampleComponent;
 import m.co.rh.id.anavigator.example.dialog.DialogHomePage;
 
 
@@ -38,9 +42,26 @@ public class HomePage extends StatefulView<Activity> implements NavOnBackPressed
     private transient INavigator mNavigator;
 
     @NavInject
-    private transient ExampleComponent mExampleComponent;
+    private transient NavRoute mNavRoute;
+
+    @NavInject
+    private transient IExampleComponent mExampleComponent;
+
+    @NavInject
+    private transient ExampleInjectedStatefulView mExampleInjectedStatefulView;
+
+    @NavInject
+    private transient List<ExampleInjectedStatefulView> mExampleInjectedStatefulViewList;
 
     public boolean isDrawerOpen;
+
+    public HomePage() {
+        mExampleInjectedStatefulView = new ExampleInjectedStatefulView();
+        mExampleInjectedStatefulViewList = new ArrayList<>();
+        mExampleInjectedStatefulViewList.add(new ExampleInjectedStatefulView());
+        mExampleInjectedStatefulViewList.add(new ExampleInjectedStatefulView());
+        mExampleInjectedStatefulViewList.add(new ExampleInjectedStatefulView());
+    }
 
     @Override
     protected void initState(Activity activity) {
@@ -50,7 +71,10 @@ public class HomePage extends StatefulView<Activity> implements NavOnBackPressed
 
     @Override
     protected View createView(Activity activity, ViewGroup container) {
-        Log.d(TAG, "createView example component: " + mExampleComponent);
+        Log.d(TAG, "createView mNavRoute: " + mNavRoute);
+        Log.d(TAG, "createView mExampleComponent: " + mExampleComponent);
+        Log.d(TAG, "createView mExampleInjectedStatefulView: " + mExampleInjectedStatefulView);
+        Log.d(TAG, "createView mExampleInjectedStatefulViewList: " + mExampleInjectedStatefulViewList);
         View view = activity.getLayoutInflater().inflate(R.layout.page_home, container, false);
         DrawerLayout drawerLayout = view.findViewById(R.id.drawer);
         drawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {
