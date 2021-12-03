@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -93,7 +92,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mNavRouteStack = new LinkedList<>();
         mViewAnimatorId = Integer.MAX_VALUE;
         mPendingNavigatorRoute = new LinkedList<>();
-        mNavSnapshotHandler = new SnapshotHandler(navConfiguration);
         mViewNavigatorList = new ArrayList<>();
         mNavOnRouteChangedListenerList = new ArrayList<>();
         int maxThread = Runtime.getRuntime().availableProcessors();
@@ -102,6 +100,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 , new LinkedBlockingQueue<>());
         mThreadPool.allowCoreThreadTimeOut(true);
         mThreadPool.prestartAllCoreThreads();
+        mNavSnapshotHandler = new SnapshotHandler(navConfiguration, mThreadPool);
     }
 
     @Override
@@ -945,12 +944,13 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 class SnapshotHandler {
     private static final String TAG = SnapshotHandler.class.getName();
 
-    private ExecutorService mExecutorService;
+    private ThreadPoolExecutor mThreadPool;
     private Future<Serializable> mStateSnapshot;
     private NavConfiguration mNavConfiguration;
 
-    SnapshotHandler(NavConfiguration navConfiguration) {
+    SnapshotHandler(NavConfiguration navConfiguration, ThreadPoolExecutor threadPoolExecutor) {
         mNavConfiguration = navConfiguration;
+        mThreadPool = threadPoolExecutor;
         if (getFile() != null) {
             loadSnapshot(); // start load as early as possible
         }
@@ -1042,32 +1042,32 @@ class SnapshotHandler {
     }
 
     private ExecutorService getExecutorService() {
-        if (mExecutorService == null) {
-            mExecutorService = Executors.newSingleThreadExecutor();
-        }
-        return mExecutorService;
+        return mThreadPool;
     }
 
     private Serializable getState() {
         if (mStateSnapshot != null) {
             try {
-                // prevent ANR
                 while (!mStateSnapshot.isDone()) {
-                    Thread.yield();
+                    // execute other task instead of just wait and do nothing
+                    try {
+                        Runnable runnable = mThreadPool.getQueue().poll();
+                        if (runnable != null) {
+                            runnable.run();
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error executing stolen task while getState", e);
+                    }
                 }
                 return mStateSnapshot.get();
             } catch (Exception e) {
-                Log.e("getState", "Unable to get snapshot", e);
+                Log.e(TAG, "Unable to get snapshot", e);
             }
         }
         return null;
     }
 
     void dispose() {
-        if (mExecutorService != null) {
-            mExecutorService.shutdown();
-            mExecutorService = null;
-        }
         if (mStateSnapshot != null) {
             mStateSnapshot.cancel(false);
             mStateSnapshot = null;
