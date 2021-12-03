@@ -107,4 +107,12 @@ public abstract class StatefulView<ACT extends Activity> implements Serializable
         mIsInitialized = (Boolean) objectInput.readObject();
         mKey = (String) objectInput.readObject();
     }
+
+    @Override
+    public String toString() {
+        return this.getClass().getName() + "{" +
+                "isInitialized=" + mIsInitialized +
+                ", key='" + mKey + '\'' +
+                '}';
+    }
 }
