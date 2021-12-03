@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import m.co.rh.id.anavigator.NavConfiguration;
 import m.co.rh.id.anavigator.NavRoute;
 import m.co.rh.id.anavigator.RouteOptions;
+import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
 
 public interface INavigator {
@@ -181,6 +182,18 @@ public interface INavigator {
      * @param viewGroupContainerId unique container ID that was registered
      */
     INavigator findViewNavigator(int viewGroupContainerId);
+
+    /**
+     * Inject StatefulView with required components from the navigator
+     * <p>
+     * NOTE:
+     * RequireNavRoute will be injected based on #parentStatefulView NavRoute.
+     * If #parentStatefulView not found in Navigator, NavRoute will be null
+     *
+     * @param parentStatefulView parent StatefulView that #statefulViews resides
+     * @param statefulViews      that implements RequireComponent, RequireNavigator, RequireNavRoute
+     */
+    void injectRequired(StatefulView parentStatefulView, StatefulView... statefulViews);
 
     /**
      * @return this navigator nav configuration, for action bar purposes perhaps

@@ -480,6 +480,29 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         return null;
     }
 
+    @Override
+    public void injectRequired(StatefulView parentStatefulView, StatefulView... statefulViews) {
+        if (parentStatefulView == null) {
+            Log.e(TAG, "Parent StatefulView is required");
+            return;
+        }
+        if (statefulViews != null) {
+            NavRoute injectedNavRoute = null;
+            if (!mNavRouteStack.isEmpty()) {
+                for (NavRoute navRoute : mNavRouteStack) {
+                    if (parentStatefulView == navRoute.getStatefulView()) {
+                        injectedNavRoute = navRoute;
+                        break;
+                    }
+                }
+            }
+
+            for (StatefulView statefulView : statefulViews) {
+                injectStatefulView(statefulView, injectedNavRoute);
+            }
+        }
+    }
+
 
     @Override
     public NavConfiguration getNavConfiguration() {
