@@ -14,12 +14,14 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
 import m.co.rh.id.anavigator.StatefulView;
+import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
-import m.co.rh.id.anavigator.component.RequireNavigator;
 
-public class CommonAppBar extends StatefulView<Activity> implements RequireNavigator, Externalizable {
+public class CommonAppBar extends StatefulView<Activity> implements Externalizable {
 
+    @NavInject
     private transient INavigator mNavigator;
+
     private String mTitle;
     private transient View.OnClickListener mNavigationOnClickListener;
     private Integer mBackgroundColor;
@@ -33,15 +35,9 @@ public class CommonAppBar extends StatefulView<Activity> implements RequireNavig
     public CommonAppBar() {
     }
 
-    public CommonAppBar(INavigator navigator) {
-        mNavigator = navigator;
+    public CommonAppBar(boolean isInitialRoute) {
         mBackgroundColor = Color.BLUE;
-        mIsInitialRoute = mNavigator.isInitialRoute();
-    }
-
-    @Override
-    public void provideNavigator(INavigator navigator) {
-        mNavigator = navigator;
+        mIsInitialRoute = isInitialRoute;
     }
 
     @Override

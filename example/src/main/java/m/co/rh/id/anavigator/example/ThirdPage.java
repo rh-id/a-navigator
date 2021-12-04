@@ -6,27 +6,18 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import m.co.rh.id.anavigator.StatefulView;
+import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
-import m.co.rh.id.anavigator.component.RequireNavigator;
 
-public class ThirdPage extends StatefulView<Activity> implements RequireNavigator {
+public class ThirdPage extends StatefulView<Activity> {
+    @NavInject
     private transient INavigator mNavigator;
+    @NavInject
     private CommonAppBar mCommonAppBar;
     private int counter;
 
-    @Override
-    public void provideNavigator(INavigator navigator) {
-        mNavigator = navigator;
-        if (mCommonAppBar == null) {
-            mCommonAppBar = new CommonAppBar(navigator);
-        } else {
-            mCommonAppBar.provideNavigator(navigator);
-        }
-    }
-
-    @Override
-    protected void initState(Activity activity) {
-        super.initState(activity);
+    public ThirdPage() {
+        mCommonAppBar = new CommonAppBar(false);
     }
 
     @Override

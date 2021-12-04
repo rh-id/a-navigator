@@ -22,7 +22,6 @@ public class BottomNavHomePage extends StatefulView<Activity> implements Require
     private transient NavOnRouteChangedListener mNavOnRouteChangedListener;
     private int mSelectedId;
 
-
     @Override
     public void provideNavigator(INavigator navigator) {
         mNavigator = navigator;

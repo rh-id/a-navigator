@@ -10,24 +10,20 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.google.android.material.navigation.NavigationView;
 
 import m.co.rh.id.anavigator.StatefulView;
+import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
-import m.co.rh.id.anavigator.component.RequireNavigator;
 
 
-public class AppCompatHomePage extends StatefulView<AppCompatActivity> implements RequireNavigator, NavOnBackPressed<AppCompatActivity> {
+public class AppCompatHomePage extends StatefulView<AppCompatActivity> implements NavOnBackPressed<AppCompatActivity> {
 
+    @NavInject
     private CommonAppBar mCommonAppBar;
+    @NavInject
     private transient INavigator mNavigator;
 
-    @Override
-    public void provideNavigator(INavigator navigator) {
-        mNavigator = navigator;
-        if (mCommonAppBar == null) {
-            mCommonAppBar = new CommonAppBar(navigator);
-        } else {
-            mCommonAppBar.provideNavigator(navigator);
-        }
+    public AppCompatHomePage() {
+        mCommonAppBar = new CommonAppBar(true);
     }
 
     @Override
