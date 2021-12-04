@@ -39,6 +39,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SealedObject;
 
 import m.co.rh.id.anavigator.annotation.NavInject;
+import m.co.rh.id.anavigator.annotation.NavRouteIndex;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
@@ -265,79 +266,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             if (fields != null) {
                 List<Future> futures = new ArrayList<>();
                 for (Field field : fields) {
-                    futures.add(mThreadPool.submit(() -> {
-                        NavInject navInject = field.getAnnotation(NavInject.class);
-                        if (navInject != null) {
-                            Class fieldType = field.getType();
-                            String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
-                            if (fieldType.isAssignableFrom(INavigator.class)) {
-                                Log.v(TAG, "navigator injected: " + fieldType.getName() + " " + field.getName());
-                                field.setAccessible(true);
-                                try {
-                                    field.set(statefulView, this);
-                                } catch (IllegalAccessException e) {
-                                    Log.e(TAG, errorMessage, e);
-                                } finally {
-                                    field.setAccessible(false);
-                                }
-                            } else if (fieldType.isAssignableFrom(NavRoute.class)) {
-                                Log.v(TAG, "navRoute injected: " + fieldType.getName() + " " + field.getName());
-                                if (navRoute != null) {
-                                    field.setAccessible(true);
-                                    try {
-                                        field.set(statefulView, navRoute);
-                                    } catch (IllegalAccessException e) {
-                                        Log.e(TAG, errorMessage, e);
-                                    } finally {
-                                        field.setAccessible(false);
-                                    }
-                                }
-                            } else if (mNavConfiguration.getRequiredComponent() != null && fieldType.isAssignableFrom(mNavConfiguration.getRequiredComponent().getClass())) {
-                                Log.v(TAG, "requiredComponent injected: " + fieldType.getName() + " " + field.getName());
-                                field.setAccessible(true);
-                                try {
-                                    field.set(statefulView, mNavConfiguration.getRequiredComponent());
-                                } catch (IllegalAccessException e) {
-                                    Log.e(TAG, errorMessage, e);
-                                } finally {
-                                    field.setAccessible(false);
-                                }
-                            } else if (StatefulView.class.isAssignableFrom(fieldType)) {
-                                field.setAccessible(true);
-                                try {
-                                    Object object = field.get(statefulView);
-                                    if (object instanceof StatefulView) {
-                                        Log.v(TAG, "statefulView injected: " + fieldType.getName() + " " + field.getName());
-                                        injectStatefulView((StatefulView) object, navRoute);
-                                    }
-                                } catch (IllegalAccessException e) {
-                                    Log.e(TAG, errorMessage, e);
-                                } finally {
-                                    field.setAccessible(false);
-                                }
-                            } else if (Iterable.class.isAssignableFrom(fieldType)) {
-                                field.setAccessible(true);
-                                try {
-                                    Object object = field.get(statefulView);
-                                    Log.v(TAG, "trying inject iterable");
-                                    if (object instanceof Iterable) {
-                                        Iterable iterable = (Iterable) object;
-                                        for (Object statefulViewObj : iterable
-                                        ) {
-                                            if (statefulViewObj instanceof StatefulView && statefulViewObj != null) {
-                                                Log.v(TAG, "iterable injected: " + statefulViewObj);
-                                                injectStatefulView((StatefulView) statefulViewObj, navRoute);
-                                            }
-                                        }
-                                    }
-                                } catch (IllegalAccessException e) {
-                                    Log.e(TAG, errorMessage, e);
-                                } finally {
-                                    field.setAccessible(false);
-                                }
-                            }
-                        }
-                    }));
+                    futures.add(mThreadPool.submit(() ->
+                            navInjectField(statefulView, navRoute, field)));
+                    futures.add(mThreadPool.submit(() ->
+                            navInjectRouteIndexField(statefulView, navRoute, field)));
                 }
                 while (!futures.isEmpty()) {
                     boolean allDone = true;
@@ -364,6 +296,135 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                             Log.e(TAG, "Error executing stolen task while injecting");
                         }
                     }
+                }
+            }
+        }
+    }
+
+    private void navInjectRouteIndexField(StatefulView statefulView, NavRoute navRoute, Field field) {
+        NavRouteIndex navRouteIndex = field.getAnnotation(NavRouteIndex.class);
+        if (navRouteIndex != null) {
+            Class fieldType = field.getType();
+            String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
+            if (Number.class.isAssignableFrom(fieldType)) {
+                Log.v(TAG, "navInjectRouteIndex injected: " + fieldType.getName() + " " + field.getName());
+                field.setAccessible(true);
+                try {
+                    int routeIndex = findRouteIndex(navRoute);
+                    if (Byte.class.isAssignableFrom(fieldType)) {
+                        field.set(statefulView, (byte) routeIndex);
+                    } else if (Short.class.isAssignableFrom(fieldType)) {
+                        field.set(statefulView, (short) routeIndex);
+                    } else if (Integer.class.isAssignableFrom(fieldType)) {
+                        field.set(statefulView, routeIndex);
+                    } else if (Long.class.isAssignableFrom(fieldType)) {
+                        field.set(statefulView, (long) routeIndex);
+                    } else if (Float.class.isAssignableFrom(fieldType)) {
+                        field.set(statefulView, (float) routeIndex);
+                    } else if (Double.class.isAssignableFrom(fieldType)) {
+                        field.set(statefulView, (double) routeIndex);
+                    }
+                } catch (IllegalAccessException e) {
+                    Log.e(TAG, errorMessage, e);
+                } finally {
+                    field.setAccessible(false);
+                }
+            } else if (fieldType.isPrimitive() && !boolean.class.isAssignableFrom(fieldType)) {
+                Log.v(TAG, "navInjectRouteIndex injected: " + fieldType.getName() + " " + field.getName());
+                field.setAccessible(true);
+                try {
+                    int routeIndex = findRouteIndex(navRoute);
+                    if (byte.class.isAssignableFrom(fieldType)) {
+                        field.setByte(statefulView, (byte) routeIndex);
+                    } else if (short.class.isAssignableFrom(fieldType)) {
+                        field.setShort(statefulView, (short) routeIndex);
+                    } else if (int.class.isAssignableFrom(fieldType)) {
+                        field.setInt(statefulView, routeIndex);
+                    } else if (long.class.isAssignableFrom(fieldType)) {
+                        field.setLong(statefulView, routeIndex);
+                    } else if (float.class.isAssignableFrom(fieldType)) {
+                        field.setFloat(statefulView, (float) routeIndex);
+                    } else if (double.class.isAssignableFrom(fieldType)) {
+                        field.setDouble(statefulView, routeIndex);
+                    }
+                } catch (IllegalAccessException e) {
+                    Log.e(TAG, errorMessage, e);
+                } finally {
+                    field.setAccessible(false);
+                }
+            }
+        }
+    }
+
+    private void navInjectField(StatefulView statefulView, NavRoute navRoute, Field field) {
+        NavInject navInject = field.getAnnotation(NavInject.class);
+        if (navInject != null) {
+            Class fieldType = field.getType();
+            String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
+            if (fieldType.isAssignableFrom(INavigator.class)) {
+                Log.v(TAG, "navigator injected: " + fieldType.getName() + " " + field.getName());
+                field.setAccessible(true);
+                try {
+                    field.set(statefulView, this);
+                } catch (IllegalAccessException e) {
+                    Log.e(TAG, errorMessage, e);
+                } finally {
+                    field.setAccessible(false);
+                }
+            } else if (fieldType.isAssignableFrom(NavRoute.class)) {
+                Log.v(TAG, "navRoute injected: " + fieldType.getName() + " " + field.getName());
+                if (navRoute != null) {
+                    field.setAccessible(true);
+                    try {
+                        field.set(statefulView, navRoute);
+                    } catch (IllegalAccessException e) {
+                        Log.e(TAG, errorMessage, e);
+                    } finally {
+                        field.setAccessible(false);
+                    }
+                }
+            } else if (mNavConfiguration.getRequiredComponent() != null && fieldType.isAssignableFrom(mNavConfiguration.getRequiredComponent().getClass())) {
+                Log.v(TAG, "requiredComponent injected: " + fieldType.getName() + " " + field.getName());
+                field.setAccessible(true);
+                try {
+                    field.set(statefulView, mNavConfiguration.getRequiredComponent());
+                } catch (IllegalAccessException e) {
+                    Log.e(TAG, errorMessage, e);
+                } finally {
+                    field.setAccessible(false);
+                }
+            } else if (StatefulView.class.isAssignableFrom(fieldType)) {
+                field.setAccessible(true);
+                try {
+                    Object object = field.get(statefulView);
+                    if (object instanceof StatefulView) {
+                        Log.v(TAG, "statefulView injected: " + fieldType.getName() + " " + field.getName());
+                        injectStatefulView((StatefulView) object, navRoute);
+                    }
+                } catch (IllegalAccessException e) {
+                    Log.e(TAG, errorMessage, e);
+                } finally {
+                    field.setAccessible(false);
+                }
+            } else if (Iterable.class.isAssignableFrom(fieldType)) {
+                field.setAccessible(true);
+                try {
+                    Object object = field.get(statefulView);
+                    Log.v(TAG, "trying inject iterable");
+                    if (object instanceof Iterable) {
+                        Iterable iterable = (Iterable) object;
+                        for (Object statefulViewObj : iterable
+                        ) {
+                            if (statefulViewObj instanceof StatefulView && statefulViewObj != null) {
+                                Log.v(TAG, "iterable injected: " + statefulViewObj);
+                                injectStatefulView((StatefulView) statefulViewObj, navRoute);
+                            }
+                        }
+                    }
+                } catch (IllegalAccessException e) {
+                    Log.e(TAG, errorMessage, e);
+                } finally {
+                    field.setAccessible(false);
                 }
             }
         }
@@ -621,6 +682,24 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
     }
 
+    @Override
+    public int findRouteIndex(NavRoute navRoute) {
+        int result = -1;
+        if (navRoute != null) {
+            if (!mNavRouteStack.isEmpty()) {
+                for (int i = mNavRouteStack.size() - 1, routeIndex = 0;
+                     i >= 0;
+                     i--, routeIndex++) {
+                    if (mNavRouteStack.get(i) == navRoute) {
+                        result = routeIndex;
+                        break;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
 
     @Override
     public NavConfiguration getNavConfiguration() {
@@ -630,11 +709,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     @Override
     public NavRoute getCurrentRoute() {
         return mNavRouteStack.peek();
-    }
-
-    @Override
-    public int getCurrentRouteIndex() {
-        return mNavRouteStack.size() - 1;
     }
 
     @Override

@@ -196,6 +196,16 @@ public interface INavigator {
     void injectRequired(StatefulView parentStatefulView, StatefulView... statefulViews);
 
     /**
+     * @param navRoute to be searched in navigator
+     * @return route index found using navRoute param. -1 if not found
+     * <p>
+     * initial route index is 0 (your home page),
+     * when navigator is pushed index increase by 1,
+     * when popped decrease by 1
+     */
+    int findRouteIndex(NavRoute navRoute);
+
+    /**
      * @return this navigator nav configuration, for action bar purposes perhaps
      */
     NavConfiguration getNavConfiguration();
@@ -204,13 +214,6 @@ public interface INavigator {
      * @return current navigator route
      */
     NavRoute getCurrentRoute();
-
-    /**
-     * @return current route index, initial route index is 0,
-     * when navigator is pushed index increase by 1,
-     * when popped decrease by 1
-     */
-    int getCurrentRouteIndex();
 
     /**
      * Signal to navigator that back button is pressed,
