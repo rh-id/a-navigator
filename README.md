@@ -238,5 +238,5 @@ public class MyApplication extends Application {
         }
 }
 ```
-# Testing StatefulView Components?
+## Testing StatefulView Components?
 For example on how to instrument test StatefulView see https://github.com/rh-id/a-news-provider for real life example
