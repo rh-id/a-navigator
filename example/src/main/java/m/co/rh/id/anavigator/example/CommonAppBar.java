@@ -6,7 +6,6 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
-import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.widget.Toolbar;
 
 import java.io.Externalizable;
@@ -52,19 +51,9 @@ public class CommonAppBar extends StatefulView<Activity> implements Externalizab
     private String mTitle;
     private transient View.OnClickListener mNavigationOnClickListener;
     private Integer mBackgroundColor;
-    private Boolean mIsInitialRoute;
 
-    /**
-     * Used for Externalizable only
-     */
-    @Deprecated
-    @VisibleForTesting
     public CommonAppBar() {
-    }
-
-    public CommonAppBar(boolean isInitialRoute) {
         mBackgroundColor = Color.BLUE;
-        mIsInitialRoute = isInitialRoute;
     }
 
     @Override
@@ -73,7 +62,7 @@ public class CommonAppBar extends StatefulView<Activity> implements Externalizab
         Toolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setTitle(mTitle);
         toolbar.setBackgroundColor(mBackgroundColor);
-        if (mIsInitialRoute) {
+        if (isInitialRoute()) {
             toolbar.setNavigationIcon(R.drawable.ic_navigation_menu);
             toolbar.setNavigationOnClickListener(mNavigationOnClickListener);
         } else {
@@ -107,6 +96,10 @@ public class CommonAppBar extends StatefulView<Activity> implements Externalizab
         Log.d(TAG, "mRouteIndexPDouble=" + mRouteIndexPDouble);
     }
 
+    private boolean isInitialRoute() {
+        return mRouteIndexInteger == 0;
+    }
+
     public void setTitle(String title) {
         mTitle = title;
     }
@@ -124,7 +117,6 @@ public class CommonAppBar extends StatefulView<Activity> implements Externalizab
         super.writeExternal(out);
         out.writeObject(mTitle);
         out.writeObject(mBackgroundColor);
-        out.writeObject(mIsInitialRoute);
     }
 
     @Override
@@ -132,6 +124,5 @@ public class CommonAppBar extends StatefulView<Activity> implements Externalizab
         super.readExternal(in);
         mTitle = (String) in.readObject();
         mBackgroundColor = (Integer) in.readObject();
-        mIsInitialRoute = (Boolean) in.readObject();
     }
 }

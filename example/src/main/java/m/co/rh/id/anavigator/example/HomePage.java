@@ -56,7 +56,7 @@ public class HomePage extends StatefulView<Activity> implements NavOnBackPressed
     public boolean isDrawerOpen;
 
     public HomePage() {
-        mCommonAppBar = new CommonAppBar(true);
+        mCommonAppBar = new CommonAppBar();
         mExampleInjectedStatefulView = new ExampleInjectedStatefulView();
         mExampleInjectedStatefulViewList = new ArrayList<>();
         mExampleInjectedStatefulViewList.add(new ExampleInjectedStatefulView());

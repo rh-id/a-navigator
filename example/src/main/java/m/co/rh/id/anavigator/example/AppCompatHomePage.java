@@ -23,7 +23,7 @@ public class AppCompatHomePage extends StatefulView<AppCompatActivity> implement
     private transient INavigator mNavigator;
 
     public AppCompatHomePage() {
-        mCommonAppBar = new CommonAppBar(true);
+        mCommonAppBar = new CommonAppBar();
     }
 
     @Override

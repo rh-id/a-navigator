@@ -17,7 +17,7 @@ public class ThirdPage extends StatefulView<Activity> {
     private int counter;
 
     public ThirdPage() {
-        mCommonAppBar = new CommonAppBar(false);
+        mCommonAppBar = new CommonAppBar();
     }
 
     @Override

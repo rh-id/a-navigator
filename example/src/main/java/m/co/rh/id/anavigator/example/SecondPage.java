@@ -21,7 +21,7 @@ public class SecondPage extends StatefulView<Activity> {
     private int counter;
 
     public SecondPage() {
-        mCommonAppBar = new CommonAppBar(false);
+        mCommonAppBar = new CommonAppBar();
     }
 
     @Override
