@@ -40,6 +40,7 @@ import javax.crypto.SealedObject;
 
 import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.annotation.NavRouteIndex;
+import m.co.rh.id.anavigator.annotation.NavViewNavigator;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
@@ -270,6 +271,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                             navInjectField(statefulView, navRoute, field)));
                     futures.add(mThreadPool.submit(() ->
                             navInjectRouteIndexField(statefulView, navRoute, field)));
+                    futures.add(mThreadPool.submit(() ->
+                            navInjectViewNavigator(statefulView, navRoute, field)));
                 }
                 while (!futures.isEmpty()) {
                     boolean allDone = true;
@@ -298,6 +301,32 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                     }
                 }
             }
+        }
+    }
+
+    private void navInjectViewNavigator(StatefulView statefulView, NavRoute navRoute, Field field) {
+        NavViewNavigator navViewNavigator = field.getAnnotation(NavViewNavigator.class);
+        String containerName = navViewNavigator.value();
+        int containerId = getActivity().getResources().getIdentifier(containerName, "id",
+                getActivity().getPackageName());
+        INavigator viewNavigator = findViewNavigator(containerId);
+        if (navViewNavigator != null && viewNavigator != null) {
+            Class fieldType = field.getType();
+            String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
+            if (INavigator.class.isAssignableFrom(fieldType)) {
+                Log.v(TAG, "navViewNavigator injected: " + fieldType.getName() + " " + field.getName());
+                field.setAccessible(true);
+                try {
+                    field.set(statefulView, viewNavigator);
+                } catch (IllegalAccessException e) {
+                    Log.e(TAG, errorMessage, e);
+                } finally {
+                    field.setAccessible(false);
+                }
+            }
+        } else {
+            Log.v(TAG, "navViewNavigator not injected: isViewNavigator null? " + (viewNavigator == null)
+                    + " containerId?" + containerId);
         }
     }
 

@@ -8,25 +8,23 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import m.co.rh.id.anavigator.NavRoute;
 import m.co.rh.id.anavigator.StatefulView;
+import m.co.rh.id.anavigator.annotation.NavInject;
+import m.co.rh.id.anavigator.annotation.NavViewNavigator;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.component.NavOnRouteChangedListener;
-import m.co.rh.id.anavigator.component.RequireNavigator;
 import m.co.rh.id.anavigator.example.R;
 import m.co.rh.id.anavigator.example.Routes;
 
 
-public class BottomNavHomePage extends StatefulView<Activity> implements RequireNavigator, NavOnBackPressed {
+public class BottomNavHomePage extends StatefulView<Activity> implements NavOnBackPressed {
+    @NavInject
     private transient INavigator mNavigator;
+
+    @NavViewNavigator("unique_container1")
     private transient INavigator mViewNavigator;
     private transient NavOnRouteChangedListener mNavOnRouteChangedListener;
     private int mSelectedId;
-
-    @Override
-    public void provideNavigator(INavigator navigator) {
-        mNavigator = navigator;
-        mViewNavigator = mNavigator.findViewNavigator(R.id.unique_container1);
-    }
 
     @Override
     protected void initState(Activity activity) {
@@ -84,20 +82,19 @@ public class BottomNavHomePage extends StatefulView<Activity> implements Require
     public void dispose(Activity activity) {
         super.dispose(activity);
         if (mNavOnRouteChangedListener != null) {
-            INavigator viewNavigator = mNavigator.findViewNavigator(R.id.unique_container1);
-            viewNavigator.removeOnRouteChangedListener(mNavOnRouteChangedListener);
+            mViewNavigator.removeOnRouteChangedListener(mNavOnRouteChangedListener);
             mNavOnRouteChangedListener = null;
         }
+        mViewNavigator = null;
         mNavigator = null;
     }
 
     @Override
     public void onBackPressed(View currentView, Activity activity, INavigator navigator) {
-        INavigator viewNavigator = navigator.findViewNavigator(R.id.unique_container1);
-        if (viewNavigator.isInitialRoute()) {
+        if (mViewNavigator.isInitialRoute()) {
             navigator.pop();
         } else {
-            viewNavigator.pop();
+            mViewNavigator.pop();
         }
     }
 }
