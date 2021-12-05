@@ -197,8 +197,15 @@ public class HomePage extends StatefulView<Activity> {
     }
 }
 ```
-If you find that navigator seemed to cause slowness, try to disable `@NavInject` functionality and use `INavigator.injectRequired`,
-to manually inject the StatefulViews
+Injection by annotations is using reflection under the hood which might be slow.
+
+If you find that navigator seemed to cause slowness, try to disable annotations injection and use `INavigator.injectRequired`,
+to manually inject the StatefulViews.
+
+NOTE:
+It is better to just use this feature for convenience (Really, a HUGE convenience),
+reflection performance might be slow but this framework mitigate it by processing reflection concurrently.
+Measure it first before decide if the slowness really comes from this framework.
 ```
 public class MyApplication extends Application {
 
@@ -218,8 +225,8 @@ public class MyApplication extends Application {
         // set File to save state if you want navigator to save its state
         navBuilder.setSaveStateFile(new File(getCacheDir(), "navigator1State"));
 
-        // disable @NavInject functionality
-        navBuilder.setEnableNavInject(false);
+        // disable annotations functionality
+        navBuilder.setEnableAnnotationInjection(false);
     }
 
     public Navigator

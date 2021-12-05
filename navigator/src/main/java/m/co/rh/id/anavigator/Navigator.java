@@ -262,7 +262,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             ((RequireComponent) statefulView)
                     .provideComponent(mNavConfiguration.getRequiredComponent());
         }
-        if (mNavConfiguration.isEnableNavInject()) {
+        if (mNavConfiguration.isEnableAnnotationInjection()) {
             Field[] fields = statefulView.getClass().getDeclaredFields();
             if (fields != null) {
                 List<Future> futures = new ArrayList<>();

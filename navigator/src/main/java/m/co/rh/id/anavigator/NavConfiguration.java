@@ -32,7 +32,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private Cipher saveStateEncryptCipher;
     private Cipher saveStateDecryptCipher;
     private Object requiredComponent;
-    private boolean enableNavInject;
+    private boolean enableAnnotationInjection;
 
     private NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
         if (initialRouteName == null) {
@@ -93,8 +93,8 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return requiredComponent;
     }
 
-    public boolean isEnableNavInject() {
-        return enableNavInject;
+    public boolean isEnableAnnotationInjection() {
+        return enableAnnotationInjection;
     }
 
     /**
@@ -125,7 +125,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         private Cipher saveStateEncryptCipher;
         private Cipher saveStateDecryptCipher;
         private Object requiredComponent;
-        private boolean enableNavInject = true;
+        private boolean enableAnnotationInjection = true;
 
         /**
          * @param initialRouteName initial route to be pushed to navigator
@@ -206,18 +206,21 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         }
 
         /**
-         * Decide whether to enable or disable @NavInject functionality.
+         * This will disable all annotation based injection.
          * Default value is true which means enabled
          * <p>
          * Reflection can be slow especially in smartphone devices where resources sometimes limited.
          * If you decide to disable this functionality you could manually use API INavigator.injectRequired,
          * to manually inject the components into your reusable StatefulView.
-         * Or set manually by implementing RequireNavigator, RequireNavRoute, RequireComponent,
+         * Or set manually by implementing RequireNavigator, RequireNavRoute, RequireComponent.
+         * <p>
+         * NOTE: Always measure the performance first before decide to disable this.
+         * Reflection in this framework is relatively fast due to concurrent thread processing.
          *
          * @param enable true if enabled, false if disabled
          */
-        public Builder setEnableNavInject(boolean enable) {
-            this.enableNavInject = enable;
+        public Builder setEnableAnnotationInjection(boolean enable) {
+            this.enableAnnotationInjection = enable;
             return this;
         }
 
@@ -278,7 +281,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
                 navConfiguration.saveStateDecryptCipher = saveStateDecryptCipher;
             }
             navConfiguration.requiredComponent = requiredComponent;
-            navConfiguration.enableNavInject = enableNavInject;
+            navConfiguration.enableAnnotationInjection = enableAnnotationInjection;
             return navConfiguration;
         }
     }
