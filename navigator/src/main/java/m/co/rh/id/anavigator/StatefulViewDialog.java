@@ -24,6 +24,14 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
     private transient Dialog mActiveDialog;
     private transient boolean mShouldPop;
 
+    /**
+     * Convenience constructor if you are going to use this dialog as a route.
+     * For re-use case, inject it using @NavInject or call provideNavigator manually
+     */
+    public StatefulViewDialog() {
+        this(null);
+    }
+
     public StatefulViewDialog(INavigator navigator) {
         mNavigator = navigator;
     }

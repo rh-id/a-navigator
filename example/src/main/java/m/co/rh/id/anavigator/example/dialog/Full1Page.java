@@ -8,20 +8,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import m.co.rh.id.anavigator.StatefulView;
+import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
-import m.co.rh.id.anavigator.component.RequireNavigator;
 import m.co.rh.id.anavigator.example.R;
 
-public class Full1Page extends StatefulView<Activity> implements RequireNavigator {
+public class Full1Page extends StatefulView<Activity> {
 
+    @NavInject
     private transient INavigator mNavigator;
     private int mCount;
-
-
-    @Override
-    public void provideNavigator(INavigator navigator) {
-        mNavigator = navigator;
-    }
 
     @Override
     protected View createView(Activity activity, ViewGroup container) {
@@ -35,7 +30,7 @@ public class Full1Page extends StatefulView<Activity> implements RequireNavigato
         });
         Button buttonShowDialog2 = view.findViewById(R.id.button_show_dialog_2);
         buttonShowDialog2.setOnClickListener(v ->
-                mNavigator.push((args, activity1) -> new Dialog2Page(mNavigator)));
+                mNavigator.push((args, activity1) -> new Dialog2Page()));
         Toast.makeText(activity, "Dialog Full page 1 createView", Toast.LENGTH_LONG).show();
         return view;
     }

@@ -8,16 +8,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import m.co.rh.id.anavigator.StatefulViewDialog;
-import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.example.R;
 
 public class Dialog1Page extends StatefulViewDialog<Activity> {
 
     private int mCount;
-
-    public Dialog1Page(INavigator navigator) {
-        super(navigator);
-    }
 
     @Override
     protected View createView(Activity activity, ViewGroup container) {

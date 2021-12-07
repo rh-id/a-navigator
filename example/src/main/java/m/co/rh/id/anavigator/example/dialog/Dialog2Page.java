@@ -8,17 +8,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import m.co.rh.id.anavigator.StatefulViewDialog;
-import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.example.R;
 import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
 
 public class Dialog2Page extends StatefulViewDialog<Activity> {
 
     private int mCount;
-
-    public Dialog2Page(INavigator navigator) {
-        super(navigator);
-    }
 
     @Override
     protected View createView(Activity activity, ViewGroup container) {
