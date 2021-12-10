@@ -106,6 +106,20 @@ public interface INavigator {
     boolean pop();
 
     /**
+     * Return/pop to previous until specified route name is reached.
+     *
+     * @param routeName route name to pop until
+     * @param result    result to be returned and forwarded to each NavPopCallback of the route it pops
+     * @throws NavigationRouteNotFound if routeName not found
+     */
+    void popUntil(String routeName, Serializable result);
+
+    /**
+     * Same as {@link #popUntil(String, Serializable)} with null result
+     */
+    void popUntil(String routeName);
+
+    /**
      * Same as {@link #retry()} but override original args with supplied args
      */
     void retry(Serializable overrideArgs);

@@ -9,6 +9,7 @@ import android.widget.Toast;
 
 import m.co.rh.id.anavigator.StatefulViewDialog;
 import m.co.rh.id.anavigator.example.R;
+import m.co.rh.id.anavigator.example.Routes;
 import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
 
 public class Dialog2Page extends StatefulViewDialog<Activity> {
@@ -40,6 +41,8 @@ public class Dialog2Page extends StatefulViewDialog<Activity> {
         buttonRetry.setOnClickListener(v -> getNavigator().retry());
         Button buttonDismis = view.findViewById(R.id.button_dismiss);
         buttonDismis.setOnClickListener(v -> getNavigator().pop());
+        Button buttonPopUntilHome = view.findViewById(R.id.button_popuntil_home);
+        buttonPopUntilHome.setOnClickListener(v -> getNavigator().popUntil(Routes.HOME_PAGE, "pop until result"));
         Toast.makeText(activity, "Dialog page 2 createView", Toast.LENGTH_LONG).show();
         return view;
     }

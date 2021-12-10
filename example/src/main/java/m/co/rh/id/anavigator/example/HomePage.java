@@ -117,7 +117,13 @@ public class HomePage extends StatefulView<Activity> implements NavOnBackPressed
             } else if (itemId == R.id.nav_bottom_home) {
                 mNavigator.push(Routes.BOTTOM_NAV_PAGE);
             } else if (itemId == R.id.nav_dialog_home) {
-                mNavigator.push((args, activity1) -> new DialogHomePage());
+                mNavigator.push((args, activity1) -> new DialogHomePage(),
+                        (activity12, currentView, serializable) -> {
+                            if (serializable != null) {
+                                Toast.makeText(activity12, "Dialog Home Page Result:" + serializable.toString()
+                                        , Toast.LENGTH_LONG).show();
+                            }
+                        });
             }
             return false;
         });

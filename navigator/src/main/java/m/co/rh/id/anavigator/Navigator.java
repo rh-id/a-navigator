@@ -206,6 +206,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public boolean pop(Serializable result) {
+        return popInternal(result, true);
+    }
+
+    private boolean popInternal(Serializable result, boolean triggerCheckAndShowDialog) {
         if (mIsNavigating) {
             // if this pop is invoke during initState or buildView or dispose, add to pending
             mPendingNavigatorRoute.add(() -> pop(result));
@@ -227,7 +231,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 // cont pop
                 popStack(existingViewAnimator.getCurrentView(), result);
                 existingViewAnimator.removeView(currentView);
-                checkAndShowDialog();
+                if (triggerCheckAndShowDialog) {
+                    checkAndShowDialog();
+                }
             }
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
@@ -529,6 +535,34 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     @Override
     public boolean pop() {
         return pop(null);
+    }
+
+    @Override
+    public void popUntil(String routeName, Serializable result) {
+        if (routeName == null) throw new NavigationRouteNotFound("Route name is null");
+        if (!mNavRouteStack.isEmpty()) {
+            NavRoute navRouteUntil = null;
+            for (NavRoute navRoute : mNavRouteStack) {
+                if (routeName.equals(navRoute.getRouteName())) {
+                    navRouteUntil = navRoute;
+                    break;
+                }
+            }
+            if (navRouteUntil == null) {
+                throw new NavigationRouteNotFound("Route not found");
+            }
+
+            NavRoute currentNavRoute = mNavRouteStack.peek();
+            while (currentNavRoute != navRouteUntil) {
+                popInternal(result, false);
+                currentNavRoute = mNavRouteStack.peek();
+            }
+        }
+    }
+
+    @Override
+    public void popUntil(String routeName) {
+        popUntil(routeName, null);
     }
 
     @Override
