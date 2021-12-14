@@ -103,11 +103,11 @@ public class HomePage extends StatefulView<Activity> implements NavOnBackPressed
                 activity.startActivityForResult(
                         new Intent(activity, AppCompatExampleActivity.class), APPCOMPAT_ACTIVITY_REQUEST_CODE);
             } else if (itemId == R.id.nav_second) {
-                mNavigator.push(Routes.SECOND_PAGE, null, (activity1, currentView, result)
-                        -> Toast.makeText(activity1, "Returned from second page with result: " + result, Toast.LENGTH_SHORT).show());
+                mNavigator.push(Routes.SECOND_PAGE, null, (navigator, navRoute, activity1, currentView)
+                        -> Toast.makeText(activity1, "Returned from second page with result: " + navRoute.getRouteResult(), Toast.LENGTH_SHORT).show());
             } else if (itemId == R.id.nav_second_anonymous) {
-                mNavigator.push((args, activity1) -> new SecondPage(), null, (activity1, currentView, result)
-                                -> Toast.makeText(activity1, "Returned from second page anonymous route with result: " + result, Toast.LENGTH_SHORT).show(),
+                mNavigator.push((args, activity1) -> new SecondPage(), null, (navigator, navRoute, activity1, currentView)
+                                -> Toast.makeText(activity1, "Returned from second page anonymous route with result: " + navRoute.getRouteResult(), Toast.LENGTH_SHORT).show(),
                         RouteOptions.withAnimation(
                                 R.anim.slide_in_right,
                                 R.anim.slide_out_left,
@@ -118,9 +118,9 @@ public class HomePage extends StatefulView<Activity> implements NavOnBackPressed
                 mNavigator.push(Routes.BOTTOM_NAV_PAGE);
             } else if (itemId == R.id.nav_dialog_home) {
                 mNavigator.push((args, activity1) -> new DialogHomePage(),
-                        (activity12, currentView, serializable) -> {
-                            if (serializable != null) {
-                                Toast.makeText(activity12, "Dialog Home Page Result:" + serializable.toString()
+                        (navigator, navRoute, activity12, currentView) -> {
+                            if (navRoute.getRouteResult() != null) {
+                                Toast.makeText(activity12, "Dialog Home Page Result:" + navRoute.getRouteResult().toString()
                                         , Toast.LENGTH_LONG).show();
                             }
                         });

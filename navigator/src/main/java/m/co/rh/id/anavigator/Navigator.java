@@ -815,7 +815,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         NavPopCallback navPopCallback = currentNavRoute.getNavPopCallback();
         if (navPopCallback != null) {
-            navPopCallback.onPop(mActivity, currentView, result);
+            navPopCallback.onPop(this, currentNavRoute, mActivity, currentView);
         }
         onRouteChanged(currentNavRoute, mNavRouteStack.peek());
     }
