@@ -240,6 +240,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 mPendingNavigatorRoute.pop().run();
             }
             mNavSnapshotHandler.saveState(mNavRouteStack);
+            if (isInitialRoute()) {
+                System.gc();
+            }
             return true;
         } else {
             // Try reset view navigator before pop
@@ -980,6 +983,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 }
             }
         }
+        System.gc();
     }
 
     @Override
