@@ -6,6 +6,8 @@ import android.content.DialogInterface;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.io.Serializable;
+
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.RequireNavigator;
 
@@ -116,6 +118,16 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
         // leave blank
     }
 
+    /**
+     * Dialog result to be passed when a dialog was dismissed outside user control.
+     * This result will be passed to navigator.pop().
+     * This is useful for AlertDialog where cancel and ok button directly dismiss the dialog,
+     * in which you must NOT trigger navigator.pop() since it is done automatically when dialog is dismissed
+     */
+    protected Serializable getDialogResult() {
+        return null;
+    }
+
     protected INavigator getNavigator() {
         return mNavigator;
     }
@@ -128,7 +140,7 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
     @Override
     public final void onDismiss(DialogInterface dialog) {
         if (mShouldPop) {
-            mNavigator.pop();
+            mNavigator.pop(getDialogResult());
         }
         onDismissDialog(dialog);
     }
