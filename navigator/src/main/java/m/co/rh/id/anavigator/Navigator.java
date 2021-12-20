@@ -231,9 +231,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 // cont pop
                 popStack(existingViewAnimator.getCurrentView(), result);
                 existingViewAnimator.removeView(currentView);
-                if (triggerCheckAndShowDialog) {
-                    checkAndShowDialog();
-                }
+            }
+            if (triggerCheckAndShowDialog) {
+                checkAndShowDialog();
             }
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {

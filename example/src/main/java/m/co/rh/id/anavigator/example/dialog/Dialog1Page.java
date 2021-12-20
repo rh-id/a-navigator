@@ -27,6 +27,9 @@ public class Dialog1Page extends StatefulViewDialog<Activity> {
         Button buttonShowPage2 = view.findViewById(R.id.button_show_page_1);
         buttonShowPage2.setOnClickListener(v ->
                 getNavigator().push((args, activity1) -> new Full1Page()));
+        Button buttonShowDialogPage2 = view.findViewById(R.id.button_show_dialog_2);
+        buttonShowDialogPage2.setOnClickListener(v ->
+                getNavigator().push((args, activity1) -> new Dialog2Page()));
         Toast.makeText(activity, "Dialog page 1 createView", Toast.LENGTH_LONG).show();
         return view;
     }
