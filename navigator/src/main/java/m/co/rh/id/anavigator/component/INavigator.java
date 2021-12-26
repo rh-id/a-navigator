@@ -1,5 +1,6 @@
 package m.co.rh.id.anavigator.component;
 
+import android.app.Activity;
 import android.content.Intent;
 
 import java.io.Serializable;
@@ -245,4 +246,10 @@ public interface INavigator {
      * is current navigator at the initial route?
      */
     boolean isInitialRoute();
+
+    /**
+     * @return Activity instance for this navigator.
+     * Maybe null if activity hasn't been created yet
+     */
+    Activity getActivity();
 }

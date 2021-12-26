@@ -919,7 +919,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         initNavigatorState(viewAnimator);
     }
 
-    protected ACT getActivity() {
+    @Override
+    public ACT getActivity() {
         return mActivity;
     }
 
