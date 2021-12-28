@@ -1,5 +1,6 @@
 # a-navigator
 
+![JitPack](https://img.shields.io/jitpack/v/github/rh-id/a-navigator)
 ![Android CI](https://github.com/rh-id/a-navigator/actions/workflows/gradlew-build.yml/badge.svg)
 
 This is a navigation framework for Android projects.
