@@ -629,14 +629,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             checkAndShowDialog();
         } else {
             ViewAnimator viewAnimator = getViewAnimator();
-            int selectedIndex = routeIndex;
-            // check and calculate previous route, how many dialog?
-            for (int i = lastIndex - routeIndex; i <= lastIndex; i++) {
-                NavRoute navRoute1 = mNavRouteStack.get(i);
-                if (navRoute1.getStatefulView() instanceof StatefulViewDialog) {
-                    selectedIndex--;
-                }
-            }
+            int selectedIndex = calculateRouteIndexForViewAnimator(routeIndex);
             View childView = viewAnimator.getChildAt(selectedIndex);
             View currentView = viewAnimator.getCurrentView();
             View buildView = navRoute.getStatefulView().buildView(getActivity(), viewAnimator);
@@ -656,6 +649,20 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
         }
+    }
+
+    // get the actual route index for ViewAnimator only
+    private int calculateRouteIndexForViewAnimator(int routeIndex) {
+        int lastIndex = mNavRouteStack.size() - 1;
+        int selectedIndex = routeIndex;
+        // check and calculate previous route, how many dialog?
+        for (int i = lastIndex - routeIndex; i <= lastIndex; i++) {
+            NavRoute navRoute1 = mNavRouteStack.get(i);
+            if (navRoute1.getStatefulView() instanceof StatefulViewDialog) {
+                selectedIndex--;
+            }
+        }
+        return selectedIndex;
     }
 
     @Override
@@ -766,6 +773,21 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         return result;
     }
 
+    @Override
+    public View findView(NavRoute navRoute) {
+        View result = null;
+        if (navRoute != null) {
+            if (!(navRoute.getStatefulView() instanceof StatefulViewDialog)) {
+                int routeIndex = findRouteIndex(navRoute);
+                if (routeIndex != -1) {
+                    result = getViewAnimator().getChildAt(
+                            calculateRouteIndexForViewAnimator(routeIndex)
+                    );
+                }
+            }
+        }
+        return result;
+    }
 
     @Override
     public NavConfiguration getNavConfiguration() {

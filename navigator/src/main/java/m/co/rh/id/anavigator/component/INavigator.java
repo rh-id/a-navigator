@@ -2,6 +2,7 @@ package m.co.rh.id.anavigator.component;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.view.View;
 
 import java.io.Serializable;
 import java.util.regex.Pattern;
@@ -219,6 +220,14 @@ public interface INavigator {
      * when popped decrease by 1
      */
     int findRouteIndex(NavRoute navRoute);
+
+    /**
+     * @param navRoute to be searched
+     * @return View for the NavRoute or null if not found,
+     * If the NavRoute points to StatefulViewDialog it will also return null,
+     * if NavRoute is valid from this navigator then it WILL return value
+     */
+    View findView(NavRoute navRoute);
 
     /**
      * @return this navigator nav configuration, for action bar purposes perhaps
