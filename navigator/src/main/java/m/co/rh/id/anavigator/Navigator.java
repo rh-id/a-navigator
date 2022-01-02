@@ -46,6 +46,7 @@ import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
+import m.co.rh.id.anavigator.component.NavOnRequestPermissionResult;
 import m.co.rh.id.anavigator.component.NavOnRouteChangedListener;
 import m.co.rh.id.anavigator.component.NavPopCallback;
 import m.co.rh.id.anavigator.component.RequireComponent;
@@ -819,9 +820,31 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mNavRouteStack.isEmpty()) {
             StatefulView statefulView = mNavRouteStack.peek().getStatefulView();
             if (statefulView instanceof NavOnActivityResult) {
-                ViewAnimator viewAnimator = getViewAnimator();
-                ((NavOnActivityResult) statefulView).onActivityResult(viewAnimator.getCurrentView(),
+                View currentView;
+                if (statefulView instanceof StatefulViewDialog) {
+                    currentView = null;
+                } else {
+                    currentView = getViewAnimator().getCurrentView();
+                }
+                ((NavOnActivityResult) statefulView).onActivityResult(currentView,
                         mActivity, this, requestCode, resultCode, data);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (!mNavRouteStack.isEmpty()) {
+            StatefulView statefulView = mNavRouteStack.peek().getStatefulView();
+            if (statefulView instanceof NavOnRequestPermissionResult) {
+                View currentView;
+                if (statefulView instanceof StatefulViewDialog) {
+                    currentView = null;
+                } else {
+                    currentView = getViewAnimator().getCurrentView();
+                }
+                ((NavOnRequestPermissionResult) statefulView).onRequestPermissionsResult(currentView,
+                        mActivity, this, requestCode, permissions, grantResults);
             }
         }
     }

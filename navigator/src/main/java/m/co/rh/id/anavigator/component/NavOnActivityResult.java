@@ -12,7 +12,7 @@ public interface NavOnActivityResult<ACT extends Activity> {
     /**
      * when onActivityResult return value
      *
-     * @param currentView current view of the StatefulView
+     * @param currentView current view of the StatefulView, null if StatefulViewDialog
      * @param activity    current activity
      * @param INavigator  current instance of the navigator
      * @param requestCode request code forwarded from onActivityResult

@@ -247,9 +247,15 @@ public interface INavigator {
 
     /**
      * Signal to navigator that activity result is invoked,
-     * let the currently displayed view handle this result
+     * let the currently displayed StatefulView handle this result
      */
     void onActivityResult(int requestCode, int resultCode, Intent data);
+
+    /**
+     * Signal to navigator that activity request permission result is invoked,
+     * let the currently displayed StatefulView handle this result
+     */
+    void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults);
 
     /**
      * is current navigator at the initial route?
