@@ -146,7 +146,7 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
     }
 
     @Override
-    public void onShow(DialogInterface dialog) {
+    public final void onShow(DialogInterface dialog) {
         mShouldPop = true;
         onShowDialog(dialog);
     }
