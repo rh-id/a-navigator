@@ -54,7 +54,10 @@ public class NavRoute implements Externalizable {
         return routeOptions;
     }
 
-    StatefulView getStatefulView() {
+    /**
+     * StatefulView for this route
+     */
+    public StatefulView getStatefulView() {
         return statefulView;
     }
 
