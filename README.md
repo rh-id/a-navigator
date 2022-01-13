@@ -31,7 +31,6 @@ allprojects {
         google()
         mavenCentral()
         maven { url "https://jitpack.io" }
-        jcenter() // Warning: this repository is going to shut down soon
     }
 }
 ```
@@ -39,9 +38,12 @@ allprojects {
 Include this to your module dependency (module build.gradle)
 ```
 dependencies {
+    // this will include navigator module and all its extension module
     implementation 'com.github.rh-id:a-navigator:v0.0.1'
-    // optional if you need the extension
-    implementation 'com.github.rh-id.a-navigator:extension-dialog:v0.0.1'
+    
+    // use these if you want the navigator with its extension separately
+    implementation 'com.github.rh-id.a-navigator:a-navigator:v0.0.1'
+    implementation 'com.github.rh-id.a-navigator:a-navigator-extension-dialog:v0.0.1'
 }
 ```
 
