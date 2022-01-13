@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="text_margin">16dp</dimen>
-    <dimen name="text_nav_menu">18sp</dimen>
+    <dimen name="a_navigator_extension_dialog_text_margin">16dp</dimen>
+    <dimen name="a_navigator_extension_dialog_text_nav_menu">18sp</dimen>
+    <dimen name="a_navigator_extension_dialog_min_width">300dp</dimen>
 </resources>

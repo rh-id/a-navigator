@@ -2,32 +2,32 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:minWidth="300dp"
+    android:minWidth="@dimen/a_navigator_extension_dialog_min_width"
     android:orientation="vertical">
 
     <TextView
         android:id="@+id/text_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/text_margin"
-        android:textSize="@dimen/text_nav_menu"
+        android:layout_margin="@dimen/a_navigator_extension_dialog_text_margin"
+        android:textSize="@dimen/a_navigator_extension_dialog_text_nav_menu"
         android:textStyle="bold" />
 
     <TextView
         android:id="@+id/text_content"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/text_margin"
-        android:layout_marginEnd="@dimen/text_margin"
-        android:layout_marginBottom="@dimen/text_margin"
-        android:textSize="@dimen/text_nav_menu" />
+        android:layout_marginStart="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin"
+        android:textSize="@dimen/a_navigator_extension_dialog_text_nav_menu" />
 
     <Button
         android:id="@+id/button_ok"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
-        android:layout_margin="@dimen/text_margin"
-        android:text="@android:string/ok" />
+        android:layout_margin="@dimen/a_navigator_extension_dialog_text_margin"
+        android:text="@string/a_navigator_extension_dialog_ok" />
 
 </LinearLayout>
