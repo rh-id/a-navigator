@@ -29,6 +29,7 @@ import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.example.component.ExampleInjectedStatefulView;
 import m.co.rh.id.anavigator.example.component.IExampleComponent;
 import m.co.rh.id.anavigator.example.dialog.DialogHomePage;
+import m.co.rh.id.anavigator.example.extension.ExtensionHomePage;
 
 
 public class HomePage extends StatefulView<Activity> implements NavOnBackPressed, NavOnActivityResult {
@@ -124,6 +125,8 @@ public class HomePage extends StatefulView<Activity> implements NavOnBackPressed
                                         , Toast.LENGTH_LONG).show();
                             }
                         });
+            } else if (itemId == R.id.nav_extension_home) {
+                mNavigator.push((args, activity1) -> new ExtensionHomePage());
             }
             return false;
         });

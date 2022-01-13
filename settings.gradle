@@ -1,3 +1,4 @@
 rootProject.name = "a-navigator"
 include ':example'
 include ':navigator'
+include ':extension-dialog'

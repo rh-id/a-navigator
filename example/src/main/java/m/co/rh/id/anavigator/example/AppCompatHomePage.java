@@ -13,6 +13,7 @@ import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
+import m.co.rh.id.anavigator.example.extension.ExtensionHomePage;
 
 
 public class AppCompatHomePage extends StatefulView<AppCompatActivity> implements NavOnBackPressed<AppCompatActivity> {
@@ -37,6 +38,8 @@ public class AppCompatHomePage extends StatefulView<AppCompatActivity> implement
                 mNavigator.push(Routes.SECOND_PAGE);
             } else if (itemId == R.id.nav_compose_example) {
                 mNavigator.push((args, activity1) -> new ExampleComposePage());
+            } else if (itemId == R.id.nav_extension_home) {
+                mNavigator.push((args, activity1) -> new ExtensionHomePage());
             }
             return false;
         });

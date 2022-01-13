@@ -40,6 +40,8 @@ Include this to your module dependency (module build.gradle)
 ```
 dependencies {
     implementation 'com.github.rh-id:a-navigator:v0.0.1'
+    // optional if you need the extension
+    implementation 'com.github.rh-id.a-navigator:extension-dialog:v0.0.1'
 }
 ```
 

@@ -26,6 +26,7 @@ import m.co.rh.id.anavigator.example.bottomnavpage.Bottom2Page;
 import m.co.rh.id.anavigator.example.bottomnavpage.BottomHomePage;
 import m.co.rh.id.anavigator.example.bottomnavpage.BottomNavHomePage;
 import m.co.rh.id.anavigator.example.component.ExampleComponent;
+import m.co.rh.id.anavigator.extension.dialog.ui.NavExtDialogConfig;
 
 public class MyApplication extends Application {
 
@@ -42,12 +43,14 @@ public class MyApplication extends Application {
     private INavigator
             mAppCompatActivityNavigator;
 
+    private NavExtDialogConfig mNavExtDialogConfig;
+
     @Override
     public void onCreate() {
         super.onCreate();
 
         // Prepare navigator for RawActivity
-        Map<String, StatefulViewFactory<RawActivity, StatefulView<Activity>>> navMap = new HashMap<>();
+        Map<String, StatefulViewFactory> navMap = new HashMap<>();
         navMap.put(Routes.HOME_PAGE, (args, activity) -> {
             if (args instanceof Boolean) {
                 if ((Boolean) args) {
@@ -58,7 +61,10 @@ public class MyApplication extends Application {
         });
         navMap.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
         navMap.put(Routes.BOTTOM_NAV_PAGE, (args, activity) -> new BottomNavHomePage());
-        NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilder1 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap);
+        // configure extension-dialog
+        mNavExtDialogConfig = new NavExtDialogConfig(this);
+        navMap.putAll(mNavExtDialogConfig.getNavMap());
+        NavConfiguration.Builder<Activity, StatefulView> navBuilder1 = new NavConfiguration.Builder(Routes.HOME_PAGE, navMap);
         navBuilder1.setSaveStateFile(new File(getCacheDir(), "anavigator/navigator1State"));
         // example cipher
         try {
@@ -79,10 +85,10 @@ public class MyApplication extends Application {
         }
 
         navBuilder1.setRequiredComponent(new ExampleComponent("this is sample component"));
-        NavConfiguration<RawActivity, StatefulView<Activity>> navConfiguration =
+        NavConfiguration<Activity, StatefulView> navConfiguration =
                 navBuilder1.build();
-        Navigator<RawActivity, StatefulView<Activity>> navigator =
-                new Navigator<>(RawActivity.class, navConfiguration);
+        Navigator<Activity, StatefulView> navigator =
+                new Navigator(RawActivity.class, navConfiguration);
         // setup bottom nav pages
         Map<String, StatefulViewFactory<RawActivity, StatefulView<Activity>>> bottomPageMap = new HashMap<>();
         bottomPageMap.put(Routes.HOME_PAGE, (args, activity) -> new BottomHomePage());
@@ -105,16 +111,17 @@ public class MyApplication extends Application {
         registerComponentCallbacks(navigator);
 
         // Prepare navigator AppCompatExampleActivity
-        Map<String, StatefulViewFactory<AppCompatExampleActivity, StatefulView>> navMap2 = new HashMap<>();
+        Map<String, StatefulViewFactory> navMap2 = new HashMap<>();
         navMap2.put(Routes.HOME_PAGE, (args, activity) -> new AppCompatHomePage());
         // can be re-used if needed
         navMap2.put(Routes.SECOND_PAGE, (args, activity) -> new SecondPage());
-        NavConfiguration.Builder<AppCompatExampleActivity, StatefulView> navBuilder2 = new NavConfiguration.Builder<>(Routes.HOME_PAGE, navMap2);
+        navMap2.putAll(mNavExtDialogConfig.getNavMap());
+        NavConfiguration.Builder<Activity, StatefulView> navBuilder2 = new NavConfiguration.Builder(Routes.HOME_PAGE, navMap2);
         navBuilder2.setSaveStateFile(new File(getCacheDir(), "AppCompatNavState"));
-        NavConfiguration<AppCompatExampleActivity, StatefulView> navConfiguration2 =
+        NavConfiguration<Activity, StatefulView> navConfiguration2 =
                 navBuilder2.build();
-        Navigator<AppCompatExampleActivity, StatefulView> navigator2 =
-                new Navigator<>(AppCompatExampleActivity.class, navConfiguration2);
+        Navigator<Activity, StatefulView> navigator2 =
+                new Navigator(AppCompatExampleActivity.class, navConfiguration2);
         mAppCompatActivityNavigator = navigator2;
         // make sure to register navigator as callbacks to work properly
         registerActivityLifecycleCallbacks(navigator2);
@@ -129,5 +136,9 @@ public class MyApplication extends Application {
             return mAppCompatActivityNavigator;
         }
         return null;
+    }
+
+    public NavExtDialogConfig getNavExtDialogConfig() {
+        return mNavExtDialogConfig;
     }
 }

@@ -12,5 +12,9 @@
             android:id="@+id/nav_compose_example"
             android:icon="@drawable/ic_menu_camera"
             android:title="@string/compose_example_page" />
+        <item
+            android:id="@+id/nav_extension_home"
+            android:icon="@drawable/ic_menu_camera"
+            android:title="@string/menu_extension_home_page" />
     </group>
 </menu>
