@@ -28,7 +28,7 @@ class MessageSVDialog extends StatefulViewDialog<Activity> implements RequireNav
     @Override
     protected View createView(Activity activity, ViewGroup container) {
         ViewGroup rootLayout = (ViewGroup) activity.getLayoutInflater()
-                .inflate(R.layout.a_navigator_extension_dialog_dialog_message, container, false);
+                .inflate(R.layout.a_navigator_extension_dialog_message_dialog, container, false);
         TextView textTitle = rootLayout.findViewById(R.id.text_title);
         TextView textContent = rootLayout.findViewById(R.id.text_content);
         textTitle.setText(getTitle());
