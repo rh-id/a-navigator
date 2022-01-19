@@ -3,8 +3,11 @@
     <!--Route list-->
     <string name="a_navigator_extension_dialog_route_message">/a-navigator/extension/dialog/message</string>
     <string name="a_navigator_extension_dialog_route_confirm">/a-navigator/extension/dialog/confirm</string>
+    <string name="a_navigator_extension_dialog_route_date_time_picker">/a-navigator/extension/dialog/dateTimePicker</string>
 
     <!--String used on the dialog UIs-->
     <string name="a_navigator_extension_dialog_ok">@android:string/ok</string>
     <string name="a_navigator_extension_dialog_cancel">@android:string/cancel</string>
+    <string name="a_navigator_extension_dialog_set_date">Set date</string>
+    <string name="a_navigator_extension_dialog_set_time">Set time</string>
 </resources>

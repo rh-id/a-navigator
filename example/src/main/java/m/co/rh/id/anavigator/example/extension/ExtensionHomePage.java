@@ -6,6 +6,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
 
+import java.util.Date;
+
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
@@ -39,6 +41,18 @@ public class ExtensionHomePage extends StatefulView<Activity> {
                         Boolean result =
                                 MyApplication.of(activity).getNavExtDialogConfig()
                                         .result_confirmDialog(navRoute);
+                        Toast.makeText(activity1, "Return result: " + result, Toast.LENGTH_LONG)
+                                .show();
+                    });
+        });
+        Button showDateTimePickerDialogButton = view.findViewById(R.id.button_show_date_time_picker_dialog);
+        showDateTimePickerDialogButton.setOnClickListener(v -> {
+            mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_DATE_TIME_PICKER),
+                    navExtDialogConfig.args_dateTimePickerDialog(true),
+                    (navigator, navRoute, activity1, currentView) -> {
+                        Date result =
+                                MyApplication.of(activity).getNavExtDialogConfig()
+                                        .result_dateTimePickerDialog(navRoute);
                         Toast.makeText(activity1, "Return result: " + result, Toast.LENGTH_LONG)
                                 .show();
                     });

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -25,6 +26,11 @@ public class NavExtDialogConfig {
      */
     public static final String ROUTE_CONFIRM = "ROUTE_CONFIRM";
 
+    /**
+     * Route to dialog with date picker and time picker
+     */
+    public static final String ROUTE_DATE_TIME_PICKER = "ROUTE_DATE_TIME_PICKER";
+
     // mapping of route constant with resource string
     private Map<String, String> mConstantRouteMap;
 
@@ -33,12 +39,15 @@ public class NavExtDialogConfig {
     public NavExtDialogConfig(Context context) {
         String routeMessage = context.getString(R.string.a_navigator_extension_dialog_route_message);
         String routeConfirm = context.getString(R.string.a_navigator_extension_dialog_route_confirm);
+        String routeDateTimePicker = context.getString(R.string.a_navigator_extension_dialog_route_date_time_picker);
         mConstantRouteMap = new LinkedHashMap<>();
         mConstantRouteMap.put(ROUTE_MESSAGE, routeMessage);
         mConstantRouteMap.put(ROUTE_CONFIRM, routeConfirm);
+        mConstantRouteMap.put(ROUTE_DATE_TIME_PICKER, routeDateTimePicker);
         mNavMap = new LinkedHashMap<>();
         mNavMap.put(routeMessage, (args, activity) -> new MessageSVDialog());
         mNavMap.put(routeConfirm, (args, activity) -> new ConfirmSVDialog());
+        mNavMap.put(routeDateTimePicker, (args, activity) -> new DateTimePickerSVDialog());
     }
 
     /**
@@ -95,4 +104,25 @@ public class NavExtDialogConfig {
         return result.isConfirmed();
     }
 
+    /**
+     * Preparing arguments for Date time picker dialog ({@link #ROUTE_DATE_TIME_PICKER})
+     *
+     * @param is24HourFormat whether the time picker show 24 hour format or not
+     * @return arguments, pass this as argument to the navigator
+     */
+    public Serializable args_dateTimePickerDialog(boolean is24HourFormat) {
+        return DateTimePickerSVDialog.Args.newArgs(is24HourFormat);
+    }
+
+    /**
+     * get the result of the date time picker dialog
+     *
+     * @param navRoute the navRoute of the confirm dialog when popped
+     * @return selected date time or null if navRoute doesn't contain result
+     */
+    public Date result_dateTimePickerDialog(NavRoute navRoute) {
+        DateTimePickerSVDialog.Result result = DateTimePickerSVDialog.Result.of(navRoute);
+        if (result == null) return null;
+        return result.getDate();
+    }
 }

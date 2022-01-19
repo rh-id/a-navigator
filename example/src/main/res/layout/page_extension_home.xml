@@ -22,4 +22,13 @@
         app:layout_constraintTop_toBottomOf="@id/button_show_message_dialog"
         app:layout_constraintEnd_toEndOf="parent"
         android:text="Show Confirm Dialog" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/button_show_date_time_picker_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/button_show_confirm_dialog"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:text="Show Date Time Picker Dialog" />
 </androidx.constraintlayout.widget.ConstraintLayout>
