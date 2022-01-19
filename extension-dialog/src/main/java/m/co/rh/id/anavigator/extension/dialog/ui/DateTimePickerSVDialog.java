@@ -33,13 +33,20 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
     @Override
     protected View createView(Activity activity, ViewGroup container) {
         View rootLayout = activity.getLayoutInflater().inflate(R.layout.a_navigator_extension_dialog_date_time_picker_dialog, container, false);
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(getDate());
         mSetDateButton = rootLayout.findViewById(R.id.button_set_date);
         mSetDateButton.setOnClickListener(this);
         mSetTimeButton = rootLayout.findViewById(R.id.button_set_time);
         mSetTimeButton.setOnClickListener(this);
         mDatePicker = rootLayout.findViewById(R.id.date_picker);
+        mDatePicker.updateDate(calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH));
         mTimePicker = rootLayout.findViewById(R.id.time_picker);
         mTimePicker.setIs24HourView(is24HourFormat());
+        mTimePicker.setCurrentHour(calendar.get(Calendar.HOUR_OF_DAY));
+        mTimePicker.setCurrentMinute(calendar.get(Calendar.MINUTE));
         Button okButton = rootLayout.findViewById(R.id.button_ok);
         okButton.setOnClickListener(this);
         Button cancelButton = rootLayout.findViewById(R.id.button_cancel);
@@ -63,6 +70,14 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
             return args.mIs24HourFormat;
         }
         return true;
+    }
+
+    public Date getDate() {
+        Args args = Args.of(mNavRoute);
+        if (args != null) {
+            return args.mDate;
+        }
+        return new Date();
     }
 
     @Override
@@ -122,9 +137,21 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
     }
 
     public static class Args implements Serializable {
+        public static Args newArgs(boolean is24HourFormat, Date date) {
+            Args args = new Args();
+            args.mIs24HourFormat = is24HourFormat;
+            if (date == null) {
+                args.mDate = new Date();
+            } else {
+                args.mDate = date;
+            }
+            return args;
+        }
+
         public static Args newArgs(boolean is24HourFormat) {
             Args args = new Args();
             args.mIs24HourFormat = is24HourFormat;
+            args.mDate = new Date();
             return args;
         }
 
@@ -143,5 +170,6 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
         }
 
         private boolean mIs24HourFormat;
+        private Date mDate;
     }
 }

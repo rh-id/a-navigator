@@ -115,6 +115,17 @@ public class NavExtDialogConfig {
     }
 
     /**
+     * Preparing arguments for Date time picker dialog ({@link #ROUTE_DATE_TIME_PICKER})
+     *
+     * @param is24HourFormat whether the time picker show 24 hour format or not
+     * @param date           date to be set for this picker
+     * @return arguments, pass this as argument to the navigator
+     */
+    public Serializable args_dateTimePickerDialog(boolean is24HourFormat, Date date) {
+        return DateTimePickerSVDialog.Args.newArgs(is24HourFormat, date);
+    }
+
+    /**
      * get the result of the date time picker dialog
      *
      * @param navRoute the navRoute of the confirm dialog when popped
