@@ -33,23 +33,30 @@
             android:textColor="@color/daynight_black_white" />
     </LinearLayout>
 
-    <DatePicker
-        android:id="@+id/date_picker"
+    <LinearLayout
+        android:animateLayoutChanges="true"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/a_navigator_extension_dialog_text_margin" />
+        android:orientation="vertical">
 
-    <TimePicker
-        android:id="@+id/time_picker"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/a_navigator_extension_dialog_text_margin"
-        android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
-        android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin" />
+        <DatePicker
+            android:id="@+id/date_picker"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/a_navigator_extension_dialog_text_margin" />
+
+        <TimePicker
+            android:id="@+id/time_picker"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/a_navigator_extension_dialog_text_margin"
+            android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
+            android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="end"
         android:orientation="horizontal">
