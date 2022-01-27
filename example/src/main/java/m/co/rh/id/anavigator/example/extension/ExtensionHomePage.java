@@ -72,6 +72,24 @@ public class ExtensionHomePage extends StatefulView<Activity> {
                                 .show();
                     });
         });
+        Button showDatePickerDialogButton = view.findViewById(R.id.button_show_date_picker_dialog);
+        showDatePickerDialogButton.setOnClickListener(v -> {
+            mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_DATE_PICKER),
+                    navExtDialogConfig.args_datePickerDialog(new Date()),
+                    (navigator, navRoute, activity1, currentView) -> {
+                        Integer year =
+                                MyApplication.of(activity).getNavExtDialogConfig()
+                                        .result_datePickerDialog_year(navRoute);
+                        Integer month =
+                                MyApplication.of(activity).getNavExtDialogConfig()
+                                        .result_datePickerDialog_month(navRoute);
+                        Integer dayOfMonth =
+                                MyApplication.of(activity).getNavExtDialogConfig()
+                                        .result_datePickerDialog_dayOfMonth(navRoute);
+                        Toast.makeText(activity1, "Return year: " + year + " month: " + month + " dayOfMonth: " + dayOfMonth, Toast.LENGTH_LONG)
+                                .show();
+                    });
+        });
         return view;
     }
 }

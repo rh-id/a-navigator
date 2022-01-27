@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 
 import java.io.Serializable;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,16 +26,18 @@ public class NavExtDialogConfig {
      * If ok button is clicked, it will return true
      */
     public static final String ROUTE_CONFIRM = "ROUTE_CONFIRM";
-
     /**
      * Route to dialog with date picker and time picker
      */
     public static final String ROUTE_DATE_TIME_PICKER = "ROUTE_DATE_TIME_PICKER";
-
     /**
      * Route to dialog with time picker
      */
     public static final String ROUTE_TIME_PICKER = "ROUTE_TIME_PICKER";
+    /**
+     * Route to dialog with date picker
+     */
+    public static final String ROUTE_DATE_PICKER = "ROUTE_DATE_PICKER";
 
     // mapping of route constant with resource string
     private Map<String, String> mConstantRouteMap;
@@ -46,16 +49,19 @@ public class NavExtDialogConfig {
         String routeConfirm = context.getString(R.string.a_navigator_extension_dialog_route_confirm);
         String routeDateTimePicker = context.getString(R.string.a_navigator_extension_dialog_route_date_time_picker);
         String routeTimePicker = context.getString(R.string.a_navigator_extension_dialog_route_time_picker);
+        String routeDatePicker = context.getString(R.string.a_navigator_extension_dialog_route_date_picker);
         mConstantRouteMap = new LinkedHashMap<>();
         mConstantRouteMap.put(ROUTE_MESSAGE, routeMessage);
         mConstantRouteMap.put(ROUTE_CONFIRM, routeConfirm);
         mConstantRouteMap.put(ROUTE_DATE_TIME_PICKER, routeDateTimePicker);
         mConstantRouteMap.put(ROUTE_TIME_PICKER, routeTimePicker);
+        mConstantRouteMap.put(ROUTE_DATE_PICKER, routeDatePicker);
         mNavMap = new LinkedHashMap<>();
         mNavMap.put(routeMessage, (args, activity) -> new MessageSVDialog());
         mNavMap.put(routeConfirm, (args, activity) -> new ConfirmSVDialog());
         mNavMap.put(routeDateTimePicker, (args, activity) -> new DateTimePickerSVDialog());
         mNavMap.put(routeTimePicker, (args, activity) -> new TimePickerSVDialog());
+        mNavMap.put(routeDatePicker, (args, activity) -> new DatePickerSVDialog());
     }
 
     /**
@@ -169,5 +175,67 @@ public class NavExtDialogConfig {
         TimePickerSVDialog.Result result = TimePickerSVDialog.Result.of(navRoute);
         if (result == null) return null;
         return result.getMinute();
+    }
+
+    /**
+     * Preparing arguments for Date picker dialog ({@link #ROUTE_DATE_PICKER})
+     *
+     * @param year       set the year
+     * @param month      set the month
+     * @param dayOfMonth set the dayOfMonth
+     * @return arguments, pass this as argument to the navigator
+     */
+    public Serializable args_datePickerDialog(int year, int month, int dayOfMonth) {
+        return DatePickerSVDialog.Args.newArgs(year, month, dayOfMonth);
+    }
+
+    /**
+     * Preparing arguments for Date picker dialog ({@link #ROUTE_DATE_PICKER})
+     *
+     * @param date to extract year, month, and dayOfMonth based on default calendar instance
+     * @return arguments, pass this as argument to the navigator
+     */
+    public Serializable args_datePickerDialog(Date date) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        return args_datePickerDialog(calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH));
+    }
+
+    /**
+     * get the result of the date picker dialog
+     *
+     * @param navRoute the navRoute of the confirm dialog when popped
+     * @return selected year or null if navRoute doesn't contain result
+     */
+    public Integer result_datePickerDialog_year(NavRoute navRoute) {
+        DatePickerSVDialog.Result result = DatePickerSVDialog.Result.of(navRoute);
+        if (result == null) return null;
+        return result.getYear();
+    }
+
+    /**
+     * get the result of the date picker dialog
+     *
+     * @param navRoute the navRoute of the confirm dialog when popped
+     * @return selected month or null if navRoute doesn't contain result
+     */
+    public Integer result_datePickerDialog_month(NavRoute navRoute) {
+        DatePickerSVDialog.Result result = DatePickerSVDialog.Result.of(navRoute);
+        if (result == null) return null;
+        return result.getMonth();
+    }
+
+    /**
+     * get the result of the date picker dialog
+     *
+     * @param navRoute the navRoute of the confirm dialog when popped
+     * @return selected dayOfMonth or null if navRoute doesn't contain result
+     */
+    public Integer result_datePickerDialog_dayOfMonth(NavRoute navRoute) {
+        DatePickerSVDialog.Result result = DatePickerSVDialog.Result.of(navRoute);
+        if (result == null) return null;
+        return result.getDayOfMonth();
     }
 }
