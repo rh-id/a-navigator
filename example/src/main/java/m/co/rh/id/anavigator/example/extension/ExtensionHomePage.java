@@ -48,7 +48,7 @@ public class ExtensionHomePage extends StatefulView<Activity> {
         Button showDateTimePickerDialogButton = view.findViewById(R.id.button_show_date_time_picker_dialog);
         showDateTimePickerDialogButton.setOnClickListener(v -> {
             mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_DATE_TIME_PICKER),
-                    navExtDialogConfig.args_dateTimePickerDialog(true),
+                    navExtDialogConfig.args_dateTimePickerDialog(null, null),
                     (navigator, navRoute, activity1, currentView) -> {
                         Date result =
                                 MyApplication.of(activity).getNavExtDialogConfig()

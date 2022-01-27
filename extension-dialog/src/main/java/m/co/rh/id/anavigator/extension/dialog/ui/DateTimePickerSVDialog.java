@@ -66,7 +66,7 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
 
     public boolean is24HourFormat() {
         Args args = Args.of(mNavRoute);
-        if (args != null) {
+        if (args != null && args.mIs24HourFormat != null) {
             return args.mIs24HourFormat;
         }
         return true;
@@ -74,7 +74,7 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
 
     public Date getDate() {
         Args args = Args.of(mNavRoute);
-        if (args != null) {
+        if (args != null && args.mDate != null) {
             return args.mDate;
         }
         return new Date();
@@ -137,21 +137,10 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
     }
 
     public static class Args implements Serializable {
-        public static Args newArgs(boolean is24HourFormat, Date date) {
+        public static Args newArgs(Boolean is24HourFormat, Date date) {
             Args args = new Args();
             args.mIs24HourFormat = is24HourFormat;
-            if (date == null) {
-                args.mDate = new Date();
-            } else {
-                args.mDate = date;
-            }
-            return args;
-        }
-
-        public static Args newArgs(boolean is24HourFormat) {
-            Args args = new Args();
-            args.mIs24HourFormat = is24HourFormat;
-            args.mDate = new Date();
+            args.mDate = date;
             return args;
         }
 
@@ -169,7 +158,7 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
             return null;
         }
 
-        private boolean mIs24HourFormat;
+        private Boolean mIs24HourFormat;
         private Date mDate;
     }
 }
