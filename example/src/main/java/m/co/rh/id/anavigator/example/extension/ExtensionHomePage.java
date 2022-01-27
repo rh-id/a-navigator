@@ -57,6 +57,21 @@ public class ExtensionHomePage extends StatefulView<Activity> {
                                 .show();
                     });
         });
+        Button showTimePickerDialogButton = view.findViewById(R.id.button_show_time_picker_dialog);
+        showTimePickerDialogButton.setOnClickListener(v -> {
+            mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_TIME_PICKER),
+                    navExtDialogConfig.args_timePickerDialog(true, 12, 0),
+                    (navigator, navRoute, activity1, currentView) -> {
+                        Integer hour =
+                                MyApplication.of(activity).getNavExtDialogConfig()
+                                        .result_timePickerDialog_hourOfDay(navRoute);
+                        Integer min =
+                                MyApplication.of(activity).getNavExtDialogConfig()
+                                        .result_timePickerDialog_minute(navRoute);
+                        Toast.makeText(activity1, "Return hour: " + hour + " minute: " + min, Toast.LENGTH_LONG)
+                                .show();
+                    });
+        });
         return view;
     }
 }
