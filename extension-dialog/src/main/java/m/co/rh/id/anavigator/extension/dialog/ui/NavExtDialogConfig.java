@@ -148,12 +148,12 @@ public class NavExtDialogConfig {
     /**
      * Preparing arguments for Time picker dialog ({@link #ROUTE_TIME_PICKER})
      *
-     * @param is24HourFormat whether the time picker show 24 hour format or not
-     * @param hourOfDay      hour of day to be set
-     * @param minute         minute to be set
+     * @param is24HourFormat whether the time picker show 24 hour format or not, set to true if null
+     * @param hourOfDay      hour of day to be set, set to current hour if null
+     * @param minute         minute to be set, set to current minute if null
      * @return arguments, pass this as argument to the navigator
      */
-    public Serializable args_timePickerDialog(boolean is24HourFormat, int hourOfDay, int minute) {
+    public Serializable args_timePickerDialog(Boolean is24HourFormat, Integer hourOfDay, Integer minute) {
         return TimePickerSVDialog.Args.newArgs(is24HourFormat, hourOfDay, minute);
     }
 

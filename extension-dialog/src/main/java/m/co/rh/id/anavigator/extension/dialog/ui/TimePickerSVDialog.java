@@ -47,7 +47,7 @@ class TimePickerSVDialog extends StatefulViewDialog<Activity> implements Require
 
     public boolean is24HourFormat() {
         Args args = Args.of(mNavRoute);
-        if (args != null) {
+        if (args != null && args.mIs24HourFormat != null) {
             return args.mIs24HourFormat;
         }
         return true;
@@ -55,8 +55,8 @@ class TimePickerSVDialog extends StatefulViewDialog<Activity> implements Require
 
     private Integer getHourOfDay() {
         Args args = Args.of(mNavRoute);
-        if (args != null) {
-            return args.mHourOfDay;
+        if (args != null && args.mHourOfDay != null) {
+            return args.mHourOfDay % 24;
         }
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
@@ -65,8 +65,8 @@ class TimePickerSVDialog extends StatefulViewDialog<Activity> implements Require
 
     private Integer getMinute() {
         Args args = Args.of(mNavRoute);
-        if (args != null) {
-            return args.mMinute;
+        if (args != null && args.mMinute != null) {
+            return args.mMinute % 60;
         }
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
@@ -120,7 +120,7 @@ class TimePickerSVDialog extends StatefulViewDialog<Activity> implements Require
     }
 
     public static class Args implements Serializable {
-        public static Args newArgs(boolean is24HourFormat, int hourOfDay, int minute) {
+        public static Args newArgs(Boolean is24HourFormat, Integer hourOfDay, Integer minute) {
             Args args = new Args();
             args.mIs24HourFormat = is24HourFormat;
             args.mHourOfDay = hourOfDay;
@@ -142,7 +142,7 @@ class TimePickerSVDialog extends StatefulViewDialog<Activity> implements Require
             return null;
         }
 
-        private boolean mIs24HourFormat;
+        private Boolean mIs24HourFormat;
         private Integer mHourOfDay;
         private Integer mMinute;
     }
