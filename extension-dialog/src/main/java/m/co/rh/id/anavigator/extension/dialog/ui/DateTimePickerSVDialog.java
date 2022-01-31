@@ -43,6 +43,14 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
         mDatePicker.updateDate(calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH));
+        Long minDate = getMinDate();
+        Long maxDate = getMaxDate();
+        if (minDate != null) {
+            mDatePicker.setMinDate(minDate);
+        }
+        if (maxDate != null) {
+            mDatePicker.setMaxDate(maxDate);
+        }
         mTimePicker = rootLayout.findViewById(R.id.time_picker);
         mTimePicker.setIs24HourView(is24HourFormat());
         mTimePicker.setCurrentHour(calendar.get(Calendar.HOUR_OF_DAY));
@@ -64,7 +72,7 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
         mTimePicker = null;
     }
 
-    public boolean is24HourFormat() {
+    private boolean is24HourFormat() {
         Args args = Args.of(mNavRoute);
         if (args != null && args.mIs24HourFormat != null) {
             return args.mIs24HourFormat;
@@ -72,12 +80,28 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
         return true;
     }
 
-    public Date getDate() {
+    private Date getDate() {
         Args args = Args.of(mNavRoute);
         if (args != null && args.mDate != null) {
             return args.mDate;
         }
         return new Date();
+    }
+
+    private Long getMinDate() {
+        Args args = Args.of(mNavRoute);
+        if (args != null && args.mMinDate != null) {
+            return args.mMinDate.getTime();
+        }
+        return null;
+    }
+
+    private Long getMaxDate() {
+        Args args = Args.of(mNavRoute);
+        if (args != null && args.mMaxDate != null) {
+            return args.mMaxDate.getTime();
+        }
+        return null;
     }
 
     @Override
@@ -137,10 +161,13 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
     }
 
     public static class Args implements Serializable {
-        public static Args newArgs(Boolean is24HourFormat, Date date) {
+
+        public static Args newArgs(Boolean is24HourFormat, Date date, Date minDate, Date maxDate) {
             Args args = new Args();
             args.mIs24HourFormat = is24HourFormat;
             args.mDate = date;
+            args.mMinDate = minDate;
+            args.mMaxDate = maxDate;
             return args;
         }
 
@@ -160,5 +187,7 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
 
         private Boolean mIs24HourFormat;
         private Date mDate;
+        public Date mMinDate;
+        public Date mMaxDate;
     }
 }

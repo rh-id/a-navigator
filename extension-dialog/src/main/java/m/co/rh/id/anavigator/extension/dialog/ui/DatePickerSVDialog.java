@@ -32,6 +32,14 @@ class DatePickerSVDialog extends StatefulViewDialog<Activity> implements Require
         mDatePicker.updateDate(getYear(),
                 getMonth(),
                 getDayOfMonth());
+        Long minDate = getMinDate();
+        Long maxDate = getMaxDate();
+        if (minDate != null) {
+            mDatePicker.setMinDate(minDate);
+        }
+        if (maxDate != null) {
+            mDatePicker.setMaxDate(maxDate);
+        }
         Button okButton = rootLayout.findViewById(R.id.button_ok);
         okButton.setOnClickListener(this);
         Button cancelButton = rootLayout.findViewById(R.id.button_cancel);
@@ -73,6 +81,22 @@ class DatePickerSVDialog extends StatefulViewDialog<Activity> implements Require
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date());
         return calendar.get(Calendar.DAY_OF_MONTH);
+    }
+
+    private Long getMinDate() {
+        DatePickerSVDialog.Args args = DatePickerSVDialog.Args.of(mNavRoute);
+        if (args != null && args.mMinDate != null) {
+            return args.mMinDate.getTime();
+        }
+        return null;
+    }
+
+    private Long getMaxDate() {
+        DatePickerSVDialog.Args args = DatePickerSVDialog.Args.of(mNavRoute);
+        if (args != null && args.mMaxDate != null) {
+            return args.mMaxDate.getTime();
+        }
+        return null;
     }
 
     @Override
@@ -129,11 +153,13 @@ class DatePickerSVDialog extends StatefulViewDialog<Activity> implements Require
     }
 
     public static class Args implements Serializable {
-        public static Args newArgs(int year, int month, int day) {
+        public static Args newArgs(int year, int month, int day, Date minDate, Date maxDate) {
             Args args = new Args();
             args.mYear = year;
             args.mMonth = month;
             args.mDayOfMonth = day;
+            args.mMinDate = minDate;
+            args.mMaxDate = maxDate;
             return args;
         }
 
@@ -154,5 +180,7 @@ class DatePickerSVDialog extends StatefulViewDialog<Activity> implements Require
         private Integer mYear;
         private Integer mMonth;
         private Integer mDayOfMonth;
+        private Date mMinDate;
+        private Date mMaxDate;
     }
 }

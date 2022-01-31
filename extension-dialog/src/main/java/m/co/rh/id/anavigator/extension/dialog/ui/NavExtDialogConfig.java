@@ -126,7 +126,21 @@ public class NavExtDialogConfig {
      * @return arguments, pass this as argument to the navigator
      */
     public Serializable args_dateTimePickerDialog(Boolean is24HourFormat, Date date) {
-        return DateTimePickerSVDialog.Args.newArgs(is24HourFormat, date);
+        return args_dateTimePickerDialog(
+                is24HourFormat, date, null, null);
+    }
+
+    /**
+     * Preparing arguments for Date time picker dialog ({@link #ROUTE_DATE_TIME_PICKER})
+     *
+     * @param is24HourFormat whether the time picker show 24 hour format or not, set to true if null
+     * @param date           date to be set for this picker, set to current date if null
+     * @param minDate        min date to be set, can be null
+     * @param maxDate        max date to be set, can be null
+     * @return arguments, pass this as argument to the navigator
+     */
+    public Serializable args_dateTimePickerDialog(Boolean is24HourFormat, Date date, Date minDate, Date maxDate) {
+        return DateTimePickerSVDialog.Args.newArgs(is24HourFormat, date, minDate, maxDate);
     }
 
     /**
@@ -186,7 +200,21 @@ public class NavExtDialogConfig {
      * @return arguments, pass this as argument to the navigator
      */
     public Serializable args_datePickerDialog(int year, int month, int dayOfMonth) {
-        return DatePickerSVDialog.Args.newArgs(year, month, dayOfMonth);
+        return args_datePickerDialog(year, month, dayOfMonth, null, null);
+    }
+
+    /**
+     * Preparing arguments for Date picker dialog ({@link #ROUTE_DATE_PICKER})
+     *
+     * @param year       set the year
+     * @param month      set the month
+     * @param dayOfMonth set the dayOfMonth
+     * @param minDate    set min date, can be null
+     * @param maxDate    set max date, can be null
+     * @return arguments, pass this as argument to the navigator
+     */
+    public Serializable args_datePickerDialog(int year, int month, int dayOfMonth, Date minDate, Date maxDate) {
+        return DatePickerSVDialog.Args.newArgs(year, month, dayOfMonth, minDate, maxDate);
     }
 
     /**
@@ -201,6 +229,22 @@ public class NavExtDialogConfig {
         return args_datePickerDialog(calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH));
+    }
+
+    /**
+     * Preparing arguments for Date picker dialog ({@link #ROUTE_DATE_PICKER})
+     *
+     * @param date    to extract year, month, and dayOfMonth based on default calendar instance
+     * @param minDate set min date, can be null
+     * @param maxDate set max date, can be null
+     * @return arguments, pass this as argument to the navigator
+     */
+    public Serializable args_datePickerDialog(Date date, Date minDate, Date maxDate) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        return args_datePickerDialog(calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH), minDate, maxDate);
     }
 
     /**
