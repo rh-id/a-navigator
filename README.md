@@ -22,6 +22,10 @@ see `AppCompatExampleActivity.java` and `ExampleComposePage.kt` for example impl
 It is best to use Java language rather than Kotlin when using this library especially when save state is enabled.
 If you are not planning to use save state then it should be fine.
 
+The StatefulViews and its stack can survive process death by enabling save state capabilities in the navigator configuration.
+When save state is enabled, any fields that are serializable and not marked as `transient` will be saved into the save state file following java object serialization standard.
+Because of this you do not need to think on how to save and restore state using saveStateInstance bundle as long as java object serialization standards are followed.
+
 ## Example Usage
 
 For example usage ![see project example](https://github.com/rh-id/a-navigator/tree/master/example), for example production app see ![a-news-provider](https://github.com/rh-id/a-news-provider)
