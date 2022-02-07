@@ -175,6 +175,10 @@ public class HomePage extends StatefulView<Activity> {
 
     @NavInject
     private StatefulView mReuseStatefulView;
+    // If save state is enabled, 
+    // any serializable field will be saved to the file
+    // and restored when deserialized
+    private String mExampleStringField;
 
     // this can be injected when setting up NavConfiguration with the required component
     @NavInject
