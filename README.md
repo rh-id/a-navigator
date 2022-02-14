@@ -257,4 +257,5 @@ public class MyApplication extends Application {
 <ul>
 <li>https://github.com/rh-id/a-news-provider</li>
 <li>https://github.com/rh-id/a-flash-deck</li>
+<li>https://github.com/rh-id/a-medic-log</li>
 </ul>
