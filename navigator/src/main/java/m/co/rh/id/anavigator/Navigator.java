@@ -274,40 +274,38 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         if (mNavConfiguration.isEnableAnnotationInjection()) {
             Field[] fields = statefulView.getClass().getDeclaredFields();
-            if (fields != null) {
-                List<Future> futures = new ArrayList<>();
-                for (Field field : fields) {
-                    futures.add(mThreadPool.submit(() ->
-                            navInjectField(statefulView, navRoute, field)));
-                    futures.add(mThreadPool.submit(() ->
-                            navInjectRouteIndexField(statefulView, navRoute, field)));
-                    futures.add(mThreadPool.submit(() ->
-                            navInjectViewNavigator(statefulView, navRoute, field)));
-                }
-                while (!futures.isEmpty()) {
-                    boolean allDone = true;
-                    for (Future future : futures) {
-                        if (!future.isDone()) {
-                            allDone = false;
-                            break;
-                        }
+            List<Future> futures = new ArrayList<>();
+            for (Field field : fields) {
+                futures.add(mThreadPool.submit(() ->
+                        navInjectField(statefulView, navRoute, field)));
+                futures.add(mThreadPool.submit(() ->
+                        navInjectRouteIndexField(statefulView, navRoute, field)));
+                futures.add(mThreadPool.submit(() ->
+                        navInjectViewNavigator(statefulView, navRoute, field)));
+            }
+            while (!futures.isEmpty()) {
+                boolean allDone = true;
+                for (Future future : futures) {
+                    if (!future.isDone()) {
+                        allDone = false;
+                        break;
                     }
-                    if (allDone) {
-                        futures.clear();
-                    } else {
-                        // deadlock gonna happen if max thread is 1,
-                        // AND when injecting nested StatefulView.
-                        // deadlock gonna happen as well if max thread is overwhelmed
-                        // by nested StatefulView.
-                        // So, if not yet done, steal task to avoid deadlock.
-                        try {
-                            Runnable runnable = mThreadPool.getQueue().poll();
-                            if (runnable != null) {
-                                runnable.run();
-                            }
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error executing stolen task while injecting");
+                }
+                if (allDone) {
+                    futures.clear();
+                } else {
+                    // deadlock gonna happen if max thread is 1,
+                    // AND when injecting nested StatefulView.
+                    // deadlock gonna happen as well if max thread is overwhelmed
+                    // by nested StatefulView.
+                    // So, if not yet done, steal task to avoid deadlock.
+                    try {
+                        Runnable runnable = mThreadPool.getQueue().poll();
+                        if (runnable != null) {
+                            runnable.run();
                         }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error executing stolen task while injecting");
                     }
                 }
             }
@@ -316,11 +314,16 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     private void navInjectViewNavigator(StatefulView statefulView, NavRoute navRoute, Field field) {
         NavViewNavigator navViewNavigator = field.getAnnotation(NavViewNavigator.class);
-        String containerName = navViewNavigator.value();
+        String containerName;
+        if (navViewNavigator == null) {
+            containerName = "";
+        } else {
+            containerName = navViewNavigator.value();
+        }
         int containerId = getActivity().getResources().getIdentifier(containerName, "id",
                 getActivity().getPackageName());
         INavigator viewNavigator = findViewNavigator(containerId);
-        if (navViewNavigator != null && viewNavigator != null) {
+        if (viewNavigator != null) {
             Class fieldType = field.getType();
             String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
             if (INavigator.class.isAssignableFrom(fieldType)) {
@@ -335,7 +338,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 }
             }
         } else {
-            Log.v(TAG, "navViewNavigator not injected: isViewNavigator null? " + (viewNavigator == null)
+            Log.v(TAG, "navViewNavigator not injected: due to viewNavigator is null"
                     + " containerId?" + containerId);
         }
     }
@@ -454,7 +457,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                         Iterable iterable = (Iterable) object;
                         for (Object statefulViewObj : iterable
                         ) {
-                            if (statefulViewObj instanceof StatefulView && statefulViewObj != null) {
+                            if (statefulViewObj instanceof StatefulView) {
                                 Log.v(TAG, "iterable injected: " + statefulViewObj);
                                 injectStatefulView((StatefulView) statefulViewObj, navRoute);
                             }
