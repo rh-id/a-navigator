@@ -492,6 +492,22 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void finishActivity(Object result) {
+        dispose();
+        setActivityResultAndFinish(Activity.RESULT_OK, result);
+    }
+
+    @Override
+    public void finishActivity() {
+        finishActivity(null);
+    }
+
+    void dispose() {
+        // dispose view navigator first
+        if (!mViewNavigatorList.isEmpty()) {
+            for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                viewNavigator.dispose();
+            }
+        }
         // dispose every stack and clear it
         while (!mNavRouteStack.isEmpty()) {
             StatefulView statefulView = mNavRouteStack.pop().getStatefulView();
@@ -499,12 +515,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         mPendingNavigatorRoute.clear();
         mIsNavigating = false;
-        setActivityResultAndFinish(Activity.RESULT_OK, result);
-    }
-
-    @Override
-    public void finishActivity() {
-        finishActivity(null);
     }
 
     @Override
