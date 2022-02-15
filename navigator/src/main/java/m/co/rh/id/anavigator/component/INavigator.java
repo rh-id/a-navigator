@@ -164,6 +164,11 @@ public interface INavigator {
     void finishActivity(Object result);
 
     /**
+     * Finish activity without result.
+     */
+    void finishActivity();
+
+    /**
      * Add callback listener to listen to changing route pop and push.
      * The callback will be triggered after pop or push had happened
      */

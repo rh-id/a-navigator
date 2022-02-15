@@ -500,6 +500,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     @Override
+    public void finishActivity() {
+        finishActivity(null);
+    }
+
+    @Override
     public void addOnRouteChangedListener(NavOnRouteChangedListener navOnRouteChangedListener) {
         mNavOnRouteChangedListenerList.add(navOnRouteChangedListener);
     }
