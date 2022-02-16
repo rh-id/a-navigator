@@ -1142,7 +1142,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 }
 
-// save state to SharedPreferences.
 // during Activity.onCreate(bundle), the bundle value seemed to always null,
 // and it haven't been fix until 2020, see https://issuetracker.google.com/issues/37020082
 @SuppressWarnings("rawtypes")
