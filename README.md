@@ -259,3 +259,6 @@ public class MyApplication extends Application {
 <li>https://github.com/rh-id/a-flash-deck</li>
 <li>https://github.com/rh-id/a-medic-log</li>
 </ul>
+
+## Support this project
+![Bitcoin](https://img.shields.io/badge/Bitcoin-000000?style=for-the-badge&logo=bitcoin&logoColor=white&link=bitcoin://bc1qk9n2kljqyunqvlpyjxd4f4tt2xl0uwt2ak9xu4)
