@@ -7,6 +7,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -82,6 +84,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private final List<ViewNavigator> mViewNavigatorList;
     private final List<NavOnRouteChangedListener> mNavOnRouteChangedListenerList;
     private final ThreadPoolExecutor mThreadPool;
+    private final Handler mHandler;
 
     /**
      * @param activityClass activity class that this navigator handles
@@ -103,6 +106,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 , new LinkedBlockingQueue<>());
         mThreadPool.allowCoreThreadTimeOut(true);
         mThreadPool.prestartAllCoreThreads();
+        mHandler = new Handler(Looper.getMainLooper());
         mNavSnapshotHandler = new SnapshotHandler(navConfiguration, mThreadPool);
     }
 
@@ -704,7 +708,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     @Override
     public void reBuildAllRoute() {
         if (mIsNavigating) {
-            mPendingNavigatorRoute.add(() -> reBuildAllRoute());
+            mPendingNavigatorRoute.add(this::reBuildAllRoute);
             return;
         }
         mIsNavigating = true;
@@ -838,14 +842,19 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mNavRouteStack.isEmpty()) {
             StatefulView statefulView = mNavRouteStack.peek().getStatefulView();
             if (statefulView instanceof NavOnActivityResult) {
-                View currentView;
+                NavOnActivityResult navOnActivityResult = (NavOnActivityResult) statefulView;
                 if (statefulView instanceof StatefulViewDialog) {
-                    currentView = null;
+                    // must be done in another loop post
+                    /* Android dialog defer show and dismiss execution into another loop,
+                     * so this must be posted in the next loop
+                     * after dialog has been shown to avoid inconsistent state
+                     */
+                    mHandler.post(() -> navOnActivityResult.onActivityResult(null,
+                            mActivity, this, requestCode, resultCode, data));
                 } else {
-                    currentView = getViewAnimator().getCurrentView();
+                    navOnActivityResult.onActivityResult(getViewAnimator().getCurrentView(),
+                            mActivity, this, requestCode, resultCode, data);
                 }
-                ((NavOnActivityResult) statefulView).onActivityResult(currentView,
-                        mActivity, this, requestCode, resultCode, data);
             }
         }
     }
@@ -1239,9 +1248,7 @@ class SnapshotHandler {
         }
         final File file = getFile();
         if (file != null) {
-            getExecutorService().submit(() -> {
-                file.delete();
-            });
+            getExecutorService().submit((Runnable) file::delete);
         }
     }
 
