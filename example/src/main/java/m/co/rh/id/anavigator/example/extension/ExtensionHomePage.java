@@ -28,14 +28,14 @@ public class ExtensionHomePage extends StatefulView<Activity> {
         showMessageDialogButton.setOnClickListener(v -> {
             String exampleTitle = "This is title";
             String exampleContent = "this is content";
-            mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_MESSAGE),
+            mNavigator.push(navExtDialogConfig.route_messageDialog(),
                     navExtDialogConfig.args_messageDialog(exampleTitle, exampleContent));
         });
         Button showConfirmDialogButton = view.findViewById(R.id.button_show_confirm_dialog);
         showConfirmDialogButton.setOnClickListener(v -> {
             String exampleTitle = "This is title";
             String exampleContent = "this is content";
-            mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_CONFIRM),
+            mNavigator.push(navExtDialogConfig.route_confirmDialog(),
                     navExtDialogConfig.args_confirmDialog(exampleTitle, exampleContent),
                     (navigator, navRoute, activity1, currentView) -> {
                         Boolean result =
@@ -47,7 +47,7 @@ public class ExtensionHomePage extends StatefulView<Activity> {
         });
         Button showDateTimePickerDialogButton = view.findViewById(R.id.button_show_date_time_picker_dialog);
         showDateTimePickerDialogButton.setOnClickListener(v -> {
-            mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_DATE_TIME_PICKER),
+            mNavigator.push(navExtDialogConfig.route_dateTimePickerDialog(),
                     navExtDialogConfig.args_dateTimePickerDialog(null, null),
                     (navigator, navRoute, activity1, currentView) -> {
                         Date result =
@@ -59,7 +59,7 @@ public class ExtensionHomePage extends StatefulView<Activity> {
         });
         Button showTimePickerDialogButton = view.findViewById(R.id.button_show_time_picker_dialog);
         showTimePickerDialogButton.setOnClickListener(v -> {
-            mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_TIME_PICKER),
+            mNavigator.push(navExtDialogConfig.route_timePickerDialog(),
                     navExtDialogConfig.args_timePickerDialog(true, 12, 0),
                     (navigator, navRoute, activity1, currentView) -> {
                         Integer hour =
@@ -74,7 +74,7 @@ public class ExtensionHomePage extends StatefulView<Activity> {
         });
         Button showDatePickerDialogButton = view.findViewById(R.id.button_show_date_picker_dialog);
         showDatePickerDialogButton.setOnClickListener(v -> {
-            mNavigator.push(navExtDialogConfig.getRoutePath(NavExtDialogConfig.ROUTE_DATE_PICKER),
+            mNavigator.push(navExtDialogConfig.route_datePickerDialog(),
                     navExtDialogConfig.args_datePickerDialog(new Date()),
                     (navigator, navRoute, activity1, currentView) -> {
                         Integer year =

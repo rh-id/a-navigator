@@ -15,29 +15,11 @@ import m.co.rh.id.anavigator.component.StatefulViewFactory;
 import m.co.rh.id.anavigator.extension.dialog.R;
 
 public class NavExtDialogConfig {
-    /**
-     * Route to dialog with title, content body, and ok button to show message only
-     */
-    public static final String ROUTE_MESSAGE = "ROUTE_MESSAGE";
-    /**
-     * Route to dialog with title, content body, cancel and ok button to show.
-     * If the dialog is canceled by clicking cancel button, it will return false.
-     * if dismissed outside or back button dismiss, it will return null,
-     * If ok button is clicked, it will return true
-     */
-    public static final String ROUTE_CONFIRM = "ROUTE_CONFIRM";
-    /**
-     * Route to dialog with date picker and time picker
-     */
-    public static final String ROUTE_DATE_TIME_PICKER = "ROUTE_DATE_TIME_PICKER";
-    /**
-     * Route to dialog with time picker
-     */
-    public static final String ROUTE_TIME_PICKER = "ROUTE_TIME_PICKER";
-    /**
-     * Route to dialog with date picker
-     */
-    public static final String ROUTE_DATE_PICKER = "ROUTE_DATE_PICKER";
+    private static final String ROUTE_MESSAGE = "ROUTE_MESSAGE";
+    private static final String ROUTE_CONFIRM = "ROUTE_CONFIRM";
+    private static final String ROUTE_DATE_TIME_PICKER = "ROUTE_DATE_TIME_PICKER";
+    private static final String ROUTE_TIME_PICKER = "ROUTE_TIME_PICKER";
+    private static final String ROUTE_DATE_PICKER = "ROUTE_DATE_PICKER";
 
     // mapping of route constant with resource string
     private Map<String, String> mConstantRouteMap;
@@ -72,14 +54,41 @@ public class NavExtDialogConfig {
     }
 
     /**
-     * Get route path for routing.
-     * use this route to push to the navigator.
-     * OR use context.getString to get actual route path and push to navigator
-     *
-     * @param route ex: {@link #ROUTE_MESSAGE}
+     * Route to dialog with title, content body, and ok button to show message only
      */
-    public String getRoutePath(String route) {
-        return mConstantRouteMap.get(route);
+    public String route_messageDialog() {
+        return mConstantRouteMap.get(ROUTE_MESSAGE);
+    }
+
+    /**
+     * Route to dialog with title, content body, cancel and ok button to show.
+     * If the dialog is canceled by clicking cancel button, it will return false.
+     * if dismissed outside or back button dismiss, it will return null,
+     * If ok button is clicked, it will return true
+     */
+    public String route_confirmDialog() {
+        return mConstantRouteMap.get(ROUTE_CONFIRM);
+    }
+
+    /**
+     * Route to dialog with date picker and time picker
+     */
+    public String route_dateTimePickerDialog() {
+        return mConstantRouteMap.get(ROUTE_DATE_TIME_PICKER);
+    }
+
+    /**
+     * Route to dialog with time picker
+     */
+    public String route_timePickerDialog() {
+        return mConstantRouteMap.get(ROUTE_TIME_PICKER);
+    }
+
+    /**
+     * Route to dialog with date picker
+     */
+    public String route_datePickerDialog() {
+        return mConstantRouteMap.get(ROUTE_DATE_PICKER);
     }
 
     /**
