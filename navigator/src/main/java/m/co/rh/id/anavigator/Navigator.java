@@ -1259,18 +1259,8 @@ class SnapshotHandler {
     private Serializable getState() {
         if (mStateSnapshot != null) {
             try {
-                while (!mStateSnapshot.isDone()) {
-                    // execute other task instead of just wait and do nothing
-                    try {
-                        Runnable runnable = mThreadPool.getQueue().poll();
-                        if (runnable != null) {
-                            runnable.run();
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error executing stolen task while getState", e);
-                    }
-                }
-                return mStateSnapshot.get();
+                // ANR is 5 seconds
+                return mStateSnapshot.get(4500, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 Log.e(TAG, "Unable to get snapshot", e);
             }
