@@ -318,13 +318,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     private void navInjectViewNavigator(StatefulView statefulView, NavRoute navRoute, Field field) {
         NavViewNavigator navViewNavigator = field.getAnnotation(NavViewNavigator.class);
-        String containerName;
         if (navViewNavigator == null) {
-            containerName = "";
-        } else {
-            containerName = navViewNavigator.value();
+            return;
         }
-        int containerId = getActivity().getResources().getIdentifier(containerName, "id",
+        int containerId = getActivity().getResources().getIdentifier(navViewNavigator.value(), "id",
                 getActivity().getPackageName());
         INavigator viewNavigator = findViewNavigator(containerId);
         if (viewNavigator != null) {
