@@ -27,6 +27,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -266,57 +267,80 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     private void injectStatefulView(StatefulView statefulView, NavRoute navRoute) {
+        boolean isAnnotationInjection = mNavConfiguration.isEnableAnnotationInjection();
+        List<Field> fieldList = new ArrayList<>();
+        if (isAnnotationInjection) {
+            fieldList = Arrays.asList(statefulView.getClass().getDeclaredFields());
+        }
+        boolean isFieldNotEmpty = !fieldList.isEmpty();
         if (statefulView instanceof RequireNavigator) {
             ((RequireNavigator) statefulView).provideNavigator(this);
         }
+        if (isAnnotationInjection && isFieldNotEmpty) {
+            List<Future> futures = new ArrayList<>();
+            for (Field field : fieldList) {
+                futures.add(mThreadPool.submit(() -> navInjectNavigator(statefulView, field)));
+                futures.add(mThreadPool.submit(() ->
+                        navViewNavigator(statefulView, navRoute, field)));
+            }
+            waitFutures(futures);
+        }
         if (statefulView instanceof RequireNavRoute) {
             ((RequireNavRoute) statefulView).provideNavRoute(navRoute);
+        }
+        if (isAnnotationInjection && isFieldNotEmpty) {
+            List<Future> futures = new ArrayList<>();
+            for (Field field : fieldList) {
+                futures.add(mThreadPool.submit(() -> navInjectNavRoute(statefulView, navRoute, field)));
+                futures.add(mThreadPool.submit(() -> navRouteIndex(statefulView, navRoute, field)));
+            }
+            waitFutures(futures);
         }
         if (statefulView instanceof RequireComponent) {
             ((RequireComponent) statefulView)
                     .provideComponent(mNavConfiguration.getRequiredComponent());
         }
-        if (mNavConfiguration.isEnableAnnotationInjection()) {
-            Field[] fields = statefulView.getClass().getDeclaredFields();
+        if (isAnnotationInjection && isFieldNotEmpty) {
             List<Future> futures = new ArrayList<>();
-            for (Field field : fields) {
+            for (Field field : fieldList) {
+                futures.add(mThreadPool.submit(() -> navInjectRequiredComponent(statefulView, field)));
                 futures.add(mThreadPool.submit(() ->
-                        navInjectField(statefulView, navRoute, field)));
-                futures.add(mThreadPool.submit(() ->
-                        navInjectRouteIndexField(statefulView, navRoute, field)));
-                futures.add(mThreadPool.submit(() ->
-                        navInjectViewNavigator(statefulView, navRoute, field)));
+                        navInjectStatefulViews(statefulView, navRoute, field)));
             }
-            while (!futures.isEmpty()) {
-                boolean allDone = true;
-                for (Future future : futures) {
-                    if (!future.isDone()) {
-                        allDone = false;
-                        break;
-                    }
+            waitFutures(futures);
+        }
+    }
+
+    private void waitFutures(List<Future> futures) {
+        while (!futures.isEmpty()) {
+            boolean allDone = true;
+            for (Future future : futures) {
+                if (!future.isDone()) {
+                    allDone = false;
+                    break;
                 }
-                if (allDone) {
-                    futures.clear();
-                } else {
-                    // deadlock gonna happen if max thread is 1,
-                    // AND when injecting nested StatefulView.
-                    // deadlock gonna happen as well if max thread is overwhelmed
-                    // by nested StatefulView.
-                    // So, if not yet done, steal task to avoid deadlock.
-                    try {
-                        Runnable runnable = mThreadPool.getQueue().poll();
-                        if (runnable != null) {
-                            runnable.run();
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error executing stolen task while injecting");
+            }
+            if (allDone) {
+                futures.clear();
+            } else {
+                // deadlock gonna happen if max thread is 1,
+                // AND when injecting nested StatefulView.
+                // deadlock gonna happen as well if max thread is overwhelmed
+                // by nested StatefulView.
+                // So, if not yet done, steal task to avoid deadlock.
+                try {
+                    Runnable runnable = mThreadPool.getQueue().poll();
+                    if (runnable != null) {
+                        runnable.run();
                     }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error executing stolen task while injecting");
                 }
             }
         }
     }
 
-    private void navInjectViewNavigator(StatefulView statefulView, NavRoute navRoute, Field field) {
+    private void navViewNavigator(StatefulView statefulView, NavRoute navRoute, Field field) {
         NavViewNavigator navViewNavigator = field.getAnnotation(NavViewNavigator.class);
         if (navViewNavigator == null) {
             return;
@@ -344,7 +368,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
     }
 
-    private void navInjectRouteIndexField(StatefulView statefulView, NavRoute navRoute, Field field) {
+    private void navRouteIndex(StatefulView statefulView, NavRoute navRoute, Field field) {
         NavRouteIndex navRouteIndex = field.getAnnotation(NavRouteIndex.class);
         if (navRouteIndex != null) {
             Class fieldType = field.getType();
@@ -399,7 +423,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
     }
 
-    private void navInjectField(StatefulView statefulView, NavRoute navRoute, Field field) {
+    private void navInjectNavigator(StatefulView statefulView, Field field) {
         NavInject navInject = field.getAnnotation(NavInject.class);
         if (navInject != null) {
             Class fieldType = field.getType();
@@ -414,7 +438,16 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 } finally {
                     field.setAccessible(false);
                 }
-            } else if (fieldType.isAssignableFrom(NavRoute.class)) {
+            }
+        }
+    }
+
+    private void navInjectNavRoute(StatefulView statefulView, NavRoute navRoute, Field field) {
+        NavInject navInject = field.getAnnotation(NavInject.class);
+        if (navInject != null) {
+            Class fieldType = field.getType();
+            String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
+            if (fieldType.isAssignableFrom(NavRoute.class)) {
                 Log.v(TAG, "navRoute injected: " + fieldType.getName() + " " + field.getName());
                 if (navRoute != null) {
                     field.setAccessible(true);
@@ -426,7 +459,16 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                         field.setAccessible(false);
                     }
                 }
-            } else if (mNavConfiguration.getRequiredComponent() != null && fieldType.isAssignableFrom(mNavConfiguration.getRequiredComponent().getClass())) {
+            }
+        }
+    }
+
+    private void navInjectRequiredComponent(StatefulView statefulView, Field field) {
+        NavInject navInject = field.getAnnotation(NavInject.class);
+        if (navInject != null) {
+            Class fieldType = field.getType();
+            String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
+            if (mNavConfiguration.getRequiredComponent() != null && fieldType.isAssignableFrom(mNavConfiguration.getRequiredComponent().getClass())) {
                 Log.v(TAG, "requiredComponent injected: " + fieldType.getName() + " " + field.getName());
                 field.setAccessible(true);
                 try {
@@ -436,7 +478,16 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 } finally {
                     field.setAccessible(false);
                 }
-            } else if (StatefulView.class.isAssignableFrom(fieldType)) {
+            }
+        }
+    }
+
+    private void navInjectStatefulViews(StatefulView statefulView, NavRoute navRoute, Field field) {
+        NavInject navInject = field.getAnnotation(NavInject.class);
+        if (navInject != null) {
+            Class fieldType = field.getType();
+            String errorMessage = "Failed to inject " + fieldType.getName() + " " + field.getName();
+            if (StatefulView.class.isAssignableFrom(fieldType)) {
                 field.setAccessible(true);
                 try {
                     Object object = field.get(statefulView);
