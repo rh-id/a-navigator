@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -32,7 +31,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -91,6 +89,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
      * @param activityClass activity class that this navigator handles
      */
     public Navigator(Class<ACT> activityClass, NavConfiguration<ACT, SV> navConfiguration) {
+        if (activityClass == null) {
+            throw new IllegalStateException("activityClass must not null");
+        }
         if (navConfiguration == null) {
             throw new IllegalStateException("navConfiguration must not null");
         }
@@ -101,14 +102,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mPendingNavigatorRoute = new LinkedList<>();
         mViewNavigatorList = new ArrayList<>();
         mNavOnRouteChangedListenerList = new ArrayList<>();
-        int maxThread = Runtime.getRuntime().availableProcessors();
-        mThreadPool = new ThreadPoolExecutor(
-                maxThread, maxThread, 30, TimeUnit.SECONDS
-                , new LinkedBlockingQueue<>());
-        mThreadPool.allowCoreThreadTimeOut(true);
-        mThreadPool.prestartAllCoreThreads();
-        mHandler = new Handler(Looper.getMainLooper());
-        mNavSnapshotHandler = new SnapshotHandler(navConfiguration, mThreadPool);
+        mThreadPool = mNavConfiguration.getThreadPoolExecutor();
+        mHandler = mNavConfiguration.getMainHandler();
+        mNavSnapshotHandler = new SnapshotHandler(navConfiguration);
     }
 
     @Override
@@ -1209,9 +1205,9 @@ class SnapshotHandler {
     private Future<Serializable> mStateSnapshot;
     private NavConfiguration mNavConfiguration;
 
-    SnapshotHandler(NavConfiguration navConfiguration, ThreadPoolExecutor threadPoolExecutor) {
+    SnapshotHandler(NavConfiguration navConfiguration) {
         mNavConfiguration = navConfiguration;
-        mThreadPool = threadPoolExecutor;
+        mThreadPool = navConfiguration.getThreadPoolExecutor();
         if (getFile() != null) {
             loadSnapshot(); // start load as early as possible
         }
