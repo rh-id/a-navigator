@@ -4,6 +4,7 @@ package m.co.rh.id.anavigator;
 import android.app.Activity;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
@@ -40,6 +41,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private boolean enableAnnotationInjection;
     private ThreadPoolExecutor threadPoolExecutor;
     private Handler mainHandler;
+    private View loadingView;
 
     private NavConfiguration(String initialRouteName, Map<String, StatefulViewFactory<ACT, SV>> navMap) {
         if (initialRouteName == null) {
@@ -127,6 +129,10 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return mainHandler;
     }
 
+    public View getLoadingView() {
+        return loadingView;
+    }
+
     public static class Builder<ACT extends Activity, SV extends StatefulView> {
         private String initialRouteName;
         private Map<String, StatefulViewFactory<ACT, SV>> navMap;
@@ -143,6 +149,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         private boolean enableAnnotationInjection = true;
         private ThreadPoolExecutor threadPoolExecutor;
         private Handler mainHandler;
+        private View loadingView;
 
         /**
          * @param initialRouteName initial route to be pushed to navigator
@@ -261,6 +268,14 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             return this;
         }
 
+        /**
+         * Set Loading view to be shown when navigator loading state
+         */
+        public Builder setLoadingView(View view) {
+            this.loadingView = view;
+            return this;
+        }
+
         public NavConfiguration<ACT, SV> build() {
             NavConfiguration<ACT, SV> navConfiguration = new NavConfiguration<>(initialRouteName, navMap);
             if (enterAnimation == null) {
@@ -336,6 +351,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             } else {
                 navConfiguration.mainHandler = mainHandler;
             }
+            navConfiguration.loadingView = loadingView;
             return navConfiguration;
         }
     }

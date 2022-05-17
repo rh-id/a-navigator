@@ -1,5 +1,6 @@
 package m.co.rh.id.anavigator;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.ComponentCallbacks2;
@@ -32,7 +33,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -962,46 +962,59 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     protected void initNavigatorState(ViewAnimator viewAnimator) {
-        Serializable routeStack = mNavSnapshotHandler.loadState();
-        if (routeStack instanceof LinkedList) {
-            mNavRouteStack = (LinkedList<NavRoute>) routeStack;
-            // guard navigator in case push or pop is called inside provideNavigator
-            mIsNavigating = true;
-            // re-inject navigator
-            for (NavRoute navRoute : mNavRouteStack) {
-                StatefulView statefulView = navRoute.getStatefulView();
-                injectStatefulView(statefulView, navRoute);
-            }
-            mIsNavigating = false;
-            if (!mPendingNavigatorRoute.isEmpty()) {
-                mPendingNavigatorRoute.pop().run();
-            }
-            Log.i(TAG, "restored navigator state");
+        // prepare loading view
+        View loadingView = mNavConfiguration.getLoadingView();
+        if (loadingView != null) {
+            viewAnimator.addView(loadingView);
         }
-        if (!mNavRouteStack.isEmpty()) {
-            // guard navigator in case push or pop is called inside buildView
-            mIsNavigating = true;
-            int last = mNavRouteStack.size() - 1;
-            for (int i = last; i >= 0; i--) {
-                NavRoute navRoute = mNavRouteStack.get(i);
-                StatefulView statefulView = navRoute
-                        .getStatefulView();
-                if (statefulView instanceof StatefulViewDialog) {
-                    ((StatefulViewDialog) statefulView).initDialog(getActivity());
-                } else {
-                    viewAnimator.addView(statefulView
-                            .buildView(mActivity, viewAnimator)
-                    );
+        mThreadPool.execute(() -> {
+            Serializable routeStack = mNavSnapshotHandler.loadState();
+            mHandler.post(() -> {
+                // remove loading view
+                if (loadingView != null) {
+                    viewAnimator.removeView(loadingView);
                 }
-            }
-            viewAnimator.setDisplayedChild(viewAnimator.getChildCount() - 1);
-            mIsNavigating = false;
-            if (!mPendingNavigatorRoute.isEmpty()) {
-                mPendingNavigatorRoute.pop().run();
-            }
-        } else {
-            push(mNavConfiguration.getInitialRouteName());
-        }
+                if (routeStack instanceof LinkedList) {
+                    mNavRouteStack = (LinkedList<NavRoute>) routeStack;
+                    // guard navigator in case push or pop is called inside provideNavigator
+                    mIsNavigating = true;
+                    // re-inject navigator
+                    for (NavRoute navRoute : mNavRouteStack) {
+                        StatefulView statefulView = navRoute.getStatefulView();
+                        injectStatefulView(statefulView, navRoute);
+                    }
+                    mIsNavigating = false;
+                    if (!mPendingNavigatorRoute.isEmpty()) {
+                        mPendingNavigatorRoute.pop().run();
+                    }
+                    Log.i(TAG, "restored navigator state");
+                }
+                if (!mNavRouteStack.isEmpty()) {
+                    // guard navigator in case push or pop is called inside buildView
+                    mIsNavigating = true;
+                    int last = mNavRouteStack.size() - 1;
+                    for (int i = last; i >= 0; i--) {
+                        NavRoute navRoute = mNavRouteStack.get(i);
+                        StatefulView statefulView = navRoute
+                                .getStatefulView();
+                        if (statefulView instanceof StatefulViewDialog) {
+                            ((StatefulViewDialog) statefulView).initDialog(getActivity());
+                        } else {
+                            viewAnimator.addView(statefulView
+                                    .buildView(mActivity, viewAnimator)
+                            );
+                        }
+                    }
+                    viewAnimator.setDisplayedChild(viewAnimator.getChildCount() - 1);
+                    mIsNavigating = false;
+                    if (!mPendingNavigatorRoute.isEmpty()) {
+                        mPendingNavigatorRoute.pop().run();
+                    }
+                } else {
+                    push(mNavConfiguration.getInitialRouteName());
+                }
+            });
+        });
     }
 
     protected Class<ACT> getActivityClass() {
@@ -1303,8 +1316,7 @@ class SnapshotHandler {
     private Serializable getState() {
         if (mStateSnapshot != null) {
             try {
-                // ANR is 5 seconds
-                return mStateSnapshot.get(4500, TimeUnit.MILLISECONDS);
+                return mStateSnapshot.get();
             } catch (Exception e) {
                 Log.e(TAG, "Unable to get snapshot", e);
             }
@@ -1323,9 +1335,11 @@ class SnapshotHandler {
 /**
  * Custom view animator that automatically switch the inAnimation and outAnimation when showPrevious or showNext
  */
+@SuppressLint("ViewConstructor")
+@SuppressWarnings("rawtypes")
 class CustomViewAnimator extends ViewAnimator {
 
-    private Navigator mNavigator;
+    private final Navigator mNavigator;
 
     public CustomViewAnimator(Context context, Navigator navigator) {
         super(context);

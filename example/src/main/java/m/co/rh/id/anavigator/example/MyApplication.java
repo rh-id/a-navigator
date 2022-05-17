@@ -1,9 +1,12 @@
 package m.co.rh.id.anavigator.example;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.animation.AnimationUtils;
 
 import java.io.File;
@@ -28,6 +31,7 @@ import m.co.rh.id.anavigator.example.bottomnavpage.BottomNavHomePage;
 import m.co.rh.id.anavigator.example.component.ExampleComponent;
 import m.co.rh.id.anavigator.extension.dialog.ui.NavExtDialogConfig;
 
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class MyApplication extends Application {
 
     public static MyApplication of(Context context) {
@@ -45,6 +49,7 @@ public class MyApplication extends Application {
 
     private NavExtDialogConfig mNavExtDialogConfig;
 
+    @SuppressLint("InflateParams")
     @Override
     public void onCreate() {
         super.onCreate();
@@ -85,6 +90,9 @@ public class MyApplication extends Application {
         }
 
         navBuilder1.setRequiredComponent(new ExampleComponent("this is sample component"));
+        View loadingView = LayoutInflater.from(this).inflate(R.layout.page_splash, null, false);
+        navBuilder1.setLoadingView(
+                loadingView);
         NavConfiguration<Activity, StatefulView> navConfiguration =
                 navBuilder1.build();
         Navigator<Activity, StatefulView> navigator =
@@ -118,6 +126,7 @@ public class MyApplication extends Application {
         navMap2.putAll(mNavExtDialogConfig.getNavMap());
         NavConfiguration.Builder<Activity, StatefulView> navBuilder2 = new NavConfiguration.Builder(Routes.HOME_PAGE, navMap2);
         navBuilder2.setSaveStateFile(new File(getCacheDir(), "AppCompatNavState"));
+        navBuilder2.setLoadingView(loadingView);
         NavConfiguration<Activity, StatefulView> navConfiguration2 =
                 navBuilder2.build();
         Navigator<Activity, StatefulView> navigator2 =
