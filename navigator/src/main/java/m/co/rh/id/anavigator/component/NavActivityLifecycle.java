@@ -11,10 +11,14 @@ public interface NavActivityLifecycle<ACT extends Activity> {
      * Listen to Activity.onResume event.
      * this is called after StatefulView.initState and StatefulView.buildView
      */
-    void onResume(ACT activity);
+    default void onResume(ACT activity) {
+        // Default leave blank
+    }
 
     /**
      * Listen to Activity.onPause event.
      */
-    void onPause(ACT activity);
+    default void onPause(ACT activity) {
+        // Default leave blank
+    }
 }

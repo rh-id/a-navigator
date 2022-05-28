@@ -10,15 +10,21 @@ public interface NavComponentCallback {
     /**
      * Listen to ComponentCallbacks2.onTrimMemory.
      */
-    void onTrimMemory(int flag);
+    default void onTrimMemory(int flag) {
+        // Default leave blank
+    }
 
     /**
      * Listen to ComponentCallbacks.onConfigurationChanged.
      */
-    void onConfigurationChanged(Configuration configuration);
+    default void onConfigurationChanged(Configuration configuration) {
+        // Default leave blank
+    }
 
     /**
      * Listen to ComponentCallbacks.onConfigurationChanged.
      */
-    void onLowMemory();
+    default void onLowMemory() {
+        // Default leave blank
+    }
 }
