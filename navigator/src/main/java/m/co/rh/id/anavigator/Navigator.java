@@ -1069,7 +1069,27 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void onActivityStarted(Activity activity) {
-        // leave blank
+        if (mActivityClass.isInstance(activity)) {
+            if (!mNavRouteStack.isEmpty()) {
+                for (NavRoute navRoute : mNavRouteStack) {
+                    StatefulView statefulView = navRoute.getStatefulView();
+                    if (statefulView instanceof NavActivityLifecycle) {
+                        Runnable onActivityStarted = () -> ((NavActivityLifecycle) statefulView).onNavActivityStarted(mActivity);
+                        if (statefulView instanceof StatefulViewDialog) {
+                            mHandler.post(onActivityStarted);
+                        } else {
+                            onActivityStarted.run();
+                        }
+                    }
+                }
+            }
+            // handle view navigator
+            if (!mViewNavigatorList.isEmpty()) {
+                for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                    viewNavigator.onActivityStarted(activity);
+                }
+            }
+        }
     }
 
     @Override
@@ -1123,7 +1143,27 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void onActivityStopped(Activity activity) {
-        // leave empty
+        if (mActivityClass.isInstance(activity)) {
+            if (!mNavRouteStack.isEmpty()) {
+                for (NavRoute navRoute : mNavRouteStack) {
+                    StatefulView statefulView = navRoute.getStatefulView();
+                    if (statefulView instanceof NavActivityLifecycle) {
+                        Runnable onActivityStopped = () -> ((NavActivityLifecycle) statefulView).onNavActivityStopped(mActivity);
+                        if (statefulView instanceof StatefulViewDialog) {
+                            mHandler.post(onActivityStopped);
+                        } else {
+                            onActivityStopped.run();
+                        }
+                    }
+                }
+            }
+            // handle view navigator
+            if (!mViewNavigatorList.isEmpty()) {
+                for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                    viewNavigator.onActivityStopped(activity);
+                }
+            }
+        }
     }
 
     @Override
