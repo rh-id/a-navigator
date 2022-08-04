@@ -1076,13 +1076,18 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     public void onActivityResumed(Activity activity) {
         if (mActivityClass.isInstance(activity)) {
             if (!mNavRouteStack.isEmpty()) {
+                checkAndShowDialog();
                 for (NavRoute navRoute : mNavRouteStack) {
                     StatefulView statefulView = navRoute.getStatefulView();
                     if (statefulView instanceof NavActivityLifecycle) {
-                        ((NavActivityLifecycle) statefulView).onResume(mActivity);
+                        Runnable onActivityResume = () -> ((NavActivityLifecycle) statefulView).onNavActivityResumed(mActivity);
+                        if (statefulView instanceof StatefulViewDialog) {
+                            mHandler.post(onActivityResume);
+                        } else {
+                            onActivityResume.run();
+                        }
                     }
                 }
-                checkAndShowDialog();
             }
             // handle view navigator
             if (!mViewNavigatorList.isEmpty()) {
@@ -1100,7 +1105,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 for (NavRoute navRoute : mNavRouteStack) {
                     StatefulView statefulView = navRoute.getStatefulView();
                     if (statefulView instanceof NavActivityLifecycle) {
-                        ((NavActivityLifecycle) statefulView).onPause(mActivity);
+                        ((NavActivityLifecycle) statefulView).onNavActivityPaused(mActivity);
                     }
                 }
                 checkAndDismissDialog();

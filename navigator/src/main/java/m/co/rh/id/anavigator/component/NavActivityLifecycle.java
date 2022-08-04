@@ -9,16 +9,15 @@ import android.app.Activity;
 public interface NavActivityLifecycle<ACT extends Activity> {
     /**
      * Listen to Activity.onResume event.
-     * this is called after StatefulView.initState and StatefulView.buildView
      */
-    default void onResume(ACT activity) {
+    default void onNavActivityResumed(ACT activity) {
         // Default leave blank
     }
 
     /**
      * Listen to Activity.onPause event.
      */
-    default void onPause(ACT activity) {
+    default void onNavActivityPaused(ACT activity) {
         // Default leave blank
     }
 }
