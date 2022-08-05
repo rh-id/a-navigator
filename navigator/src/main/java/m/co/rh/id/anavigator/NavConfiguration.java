@@ -90,6 +90,10 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         return saveStateFile;
     }
 
+    public void setSaveStateFile(File file) {
+        saveStateFile = file;
+    }
+
     public Cipher getSaveStateEncryptCipher() {
         return saveStateEncryptCipher;
     }

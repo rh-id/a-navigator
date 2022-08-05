@@ -96,7 +96,7 @@ public class MyApplication extends Application {
         // make sure to set initial route to home page which is "/"
         NavConfiguration.Builder<MainActivity, StatefulView<Activity>> navBuilder = new NavConfiguration.Builder<>("/", navMap);
 
-        // set File to save state if you want navigator to save its state
+        // set custom File location to save state 
         navBuilder.setSaveStateFile(new File(getCacheDir(), "navigator1State"));
 
         NavConfiguration<MainActivity, StatefulView<Activity>> navConfiguration =
@@ -114,7 +114,7 @@ public class MyApplication extends Application {
         bottomPageMap.put("/page1", (args, activity) -> new Bottom1Page());
         bottomPageMap.put("/page2", (args, activity) -> new Bottom2Page());
         NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilderBottom = new NavConfiguration.Builder<>("/", bottomPageMap);
-        // you could also enable save state for this nested/view navigator
+        // you could also set custom save state file for this nested/view navigator
         navBuilderBottom.setSaveStateFile(new File(getCacheDir(), "navigatorBottomState"));
         navigator.createViewNavigator(navBuilderBottom.build(), R.id.unique_container1);
 
@@ -238,7 +238,7 @@ public class MyApplication extends Application {
         // make sure to set initial route to home page which is "/"
         NavConfiguration.Builder<MainActivity, StatefulView<Activity>> navBuilder = new NavConfiguration.Builder<>("/", navMap);
 
-        // set File to save state if you want navigator to save its state
+        // set custom File location to save state 
         navBuilder.setSaveStateFile(new File(getCacheDir(), "navigator1State"));
 
         // disable annotations functionality

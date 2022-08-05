@@ -70,7 +70,6 @@ public class MyApplication extends Application {
         mNavExtDialogConfig = new NavExtDialogConfig(this);
         navMap.putAll(mNavExtDialogConfig.getNavMap());
         NavConfiguration.Builder<Activity, StatefulView> navBuilder1 = new NavConfiguration.Builder(Routes.HOME_PAGE, navMap);
-        navBuilder1.setSaveStateFile(new File(getCacheDir(), "anavigator/navigator1State"));
         // example cipher
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2withHmacSHA1");
@@ -103,7 +102,6 @@ public class MyApplication extends Application {
         bottomPageMap.put(Routes.PAGE_1, (args, activity) -> new Bottom1Page());
         bottomPageMap.put(Routes.PAGE_2, (args, activity) -> new Bottom2Page());
         NavConfiguration.Builder<RawActivity, StatefulView<Activity>> navBuilderBottom = new NavConfiguration.Builder<>(Routes.HOME_PAGE, bottomPageMap);
-        navBuilderBottom.setSaveStateFile(new File(getCacheDir(), "navigatorBottomState"));
         navBuilderBottom.setAnimation(
                 AnimationUtils.loadAnimation(this, R.anim.slide_in_right),
                 AnimationUtils.loadAnimation(this, R.anim.slide_out_left),

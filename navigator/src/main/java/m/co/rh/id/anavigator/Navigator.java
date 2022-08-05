@@ -6,6 +6,8 @@ import android.app.Application;
 import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
@@ -1057,6 +1059,35 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     public void onActivityCreated(Activity activity, Bundle bundle) {
         if (mActivityClass.isInstance(activity)) {
             mActivity = (ACT) activity;
+            String packageName = activity.getPackageName();
+            Integer versionCode = null;
+            String versionName = null;
+            File saveStateFile = null;
+            try {
+                PackageInfo packageInfo = activity.getPackageManager().getPackageInfo(packageName, 0);
+                versionCode = packageInfo.versionCode;
+                versionName = packageInfo.versionName;
+                saveStateFile = new File(activity.getCacheDir(), "m.co.rh.id.anavigator/"
+                        + packageName + "_" + versionName + "_" + versionCode +
+                        "/" + mActivity.getClass().getName());
+            } catch (PackageManager.NameNotFoundException e) {
+                Log.e(TAG, "Package info not found for: " + packageName, e);
+            }
+            if (mNavConfiguration.getSaveStateFile() == null && saveStateFile != null) {
+                mNavConfiguration.setSaveStateFile(saveStateFile);
+            }
+            if (!mViewNavigatorList.isEmpty() && saveStateFile != null) {
+                for (ViewNavigator viewNavigator : mViewNavigatorList) {
+                    NavConfiguration navConfiguration = viewNavigator.getNavConfiguration();
+                    if (navConfiguration.getSaveStateFile() == null) {
+                        Integer containerId = viewNavigator.getViewGroupContainerId();
+                        File viewNavSaveStateFile = new File(activity.getCacheDir(), "m.co.rh.id.anavigator/"
+                                + packageName + "_" + versionName + "_" + versionCode +
+                                "/" + mActivity.getClass().getName() + "_" + "viewNavigator_" + containerId);
+                        navConfiguration.setSaveStateFile(viewNavSaveStateFile);
+                    }
+                }
+            }
             initViewAnimator();
         }
         // handle view navigator
