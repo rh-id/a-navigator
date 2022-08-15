@@ -34,7 +34,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -84,7 +83,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private final SnapshotHandler mNavSnapshotHandler;
     private final List<ViewNavigator> mViewNavigatorList;
     private final List<NavOnRouteChangedListener> mNavOnRouteChangedListenerList;
-    private final ThreadPoolExecutor mThreadPool;
+    private final ExecutorService mExecutorService;
     private final Handler mHandler;
 
     /**
@@ -104,7 +103,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mPendingNavigatorRoute = new LinkedList<>();
         mViewNavigatorList = new ArrayList<>();
         mNavOnRouteChangedListenerList = new ArrayList<>();
-        mThreadPool = mNavConfiguration.getThreadPoolExecutor();
+        mExecutorService = mNavConfiguration.getExecutorService();
         mHandler = mNavConfiguration.getMainHandler();
         mNavSnapshotHandler = new SnapshotHandler(navConfiguration);
     }
@@ -277,8 +276,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (isAnnotationInjection && isFieldNotEmpty) {
             List<Future> futures = new ArrayList<>();
             for (Field field : fieldList) {
-                futures.add(mThreadPool.submit(() -> navInjectNavigator(statefulView, field)));
-                futures.add(mThreadPool.submit(() ->
+                futures.add(mExecutorService.submit(() -> navInjectNavigator(statefulView, field)));
+                futures.add(mExecutorService.submit(() ->
                         navViewNavigator(statefulView, navRoute, field)));
             }
             waitFutures(futures);
@@ -289,8 +288,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (isAnnotationInjection && isFieldNotEmpty) {
             List<Future> futures = new ArrayList<>();
             for (Field field : fieldList) {
-                futures.add(mThreadPool.submit(() -> navInjectNavRoute(statefulView, navRoute, field)));
-                futures.add(mThreadPool.submit(() -> navRouteIndex(statefulView, navRoute, field)));
+                futures.add(mExecutorService.submit(() -> navInjectNavRoute(statefulView, navRoute, field)));
+                futures.add(mExecutorService.submit(() -> navRouteIndex(statefulView, navRoute, field)));
             }
             waitFutures(futures);
         }
@@ -301,8 +300,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (isAnnotationInjection && isFieldNotEmpty) {
             List<Future> futures = new ArrayList<>();
             for (Field field : fieldList) {
-                futures.add(mThreadPool.submit(() -> navInjectRequiredComponent(statefulView, field)));
-                futures.add(mThreadPool.submit(() ->
+                futures.add(mExecutorService.submit(() -> navInjectRequiredComponent(statefulView, field)));
+                futures.add(mExecutorService.submit(() ->
                         navInjectStatefulViews(statefulView, navRoute, field)));
             }
             waitFutures(futures);
@@ -320,20 +319,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             }
             if (allDone) {
                 futures.clear();
-            } else {
-                // deadlock gonna happen if max thread is 1,
-                // AND when injecting nested StatefulView.
-                // deadlock gonna happen as well if max thread is overwhelmed
-                // by nested StatefulView.
-                // So, if not yet done, steal task to avoid deadlock.
-                try {
-                    Runnable runnable = mThreadPool.getQueue().poll();
-                    if (runnable != null) {
-                        runnable.run();
-                    }
-                } catch (Exception e) {
-                    Log.e(TAG, "Error executing stolen task while injecting");
-                }
             }
         }
     }
@@ -969,7 +954,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (loadingView != null) {
             viewAnimator.addView(loadingView);
         }
-        mThreadPool.execute(() -> {
+        mExecutorService.execute(() -> {
             Serializable routeStack = mNavSnapshotHandler.loadState();
             mHandler.post(() -> {
                 // remove loading view
@@ -1290,13 +1275,13 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 class SnapshotHandler {
     private static final String TAG = SnapshotHandler.class.getName();
 
-    private ThreadPoolExecutor mThreadPool;
+    private ExecutorService mExecutorService;
     private Future<Serializable> mStateSnapshot;
     private NavConfiguration mNavConfiguration;
 
     SnapshotHandler(NavConfiguration navConfiguration) {
         mNavConfiguration = navConfiguration;
-        mThreadPool = navConfiguration.getThreadPoolExecutor();
+        mExecutorService = navConfiguration.getExecutorService();
         if (getFile() != null) {
             loadSnapshot(); // start load as early as possible
         }
@@ -1386,7 +1371,7 @@ class SnapshotHandler {
     }
 
     private ExecutorService getExecutorService() {
-        return mThreadPool;
+        return mExecutorService;
     }
 
     private Serializable getState() {
