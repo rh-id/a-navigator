@@ -14,12 +14,13 @@ import android.view.animation.TranslateAnimation;
 
 import java.io.File;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.crypto.Cipher;
 import javax.crypto.NullCipher;
 
-import co.rh.id.lib.concurrent_utils.concurrent.executor.WeightedThreadPool;
 import m.co.rh.id.anavigator.component.StatefulViewFactory;
 
 
@@ -38,7 +39,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
     private Cipher saveStateDecryptCipher;
     private Object requiredComponent;
     private boolean enableAnnotationInjection;
-    private ExecutorService executorService;
+    private ThreadPoolExecutor threadPoolExecutor;
     private Handler mainHandler;
     private View loadingView;
 
@@ -124,8 +125,8 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         saveStateDecryptCipher = decrypt;
     }
 
-    public ExecutorService getExecutorService() {
-        return executorService;
+    public ThreadPoolExecutor getThreadPoolExecutor() {
+        return threadPoolExecutor;
     }
 
     public Handler getMainHandler() {
@@ -150,7 +151,7 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         private Cipher saveStateDecryptCipher;
         private Object requiredComponent;
         private boolean enableAnnotationInjection = true;
-        private ExecutorService executorService;
+        private ThreadPoolExecutor threadPoolExecutor;
         private Handler mainHandler;
         private View loadingView;
 
@@ -252,14 +253,14 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
         }
 
         /**
-         * Set ExecutorService to be used for this navigator
+         * Set ThreadPoolExecutor to be used for this navigator
          * <p>
          * NOTE: DO NOT use shared ThreadPoolExecutor instance that is used for other purpose other than for Navigator instances.
          * Use ThreadPoolExecutor instance that is shared across Navigator instances only.
          * OR just create ThreadPoolExecutor instance exclusively for this navigator instance.
          */
-        public Builder setExecutorService(ExecutorService executorService) {
-            this.executorService = executorService;
+        public Builder setThreadPoolExecutor(ThreadPoolExecutor threadPoolExecutor) {
+            this.threadPoolExecutor = threadPoolExecutor;
             return this;
         }
 
@@ -338,13 +339,16 @@ public class NavConfiguration<ACT extends Activity, SV extends StatefulView> {
             navConfiguration.requiredComponent = requiredComponent;
             navConfiguration.enableAnnotationInjection = enableAnnotationInjection;
 
-            if (executorService == null) {
-                WeightedThreadPool weightedThreadPool = new WeightedThreadPool();
-                weightedThreadPool.setThreadTimeoutMillis(30_000);
-                weightedThreadPool.setMaxWeight(5);
-                navConfiguration.executorService = weightedThreadPool;
+            if (threadPoolExecutor == null) {
+                int maxThread = Runtime.getRuntime().availableProcessors();
+                ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
+                        maxThread, maxThread, 30, TimeUnit.SECONDS
+                        , new LinkedBlockingQueue<>());
+                threadPoolExecutor.allowCoreThreadTimeOut(true);
+                threadPoolExecutor.prestartAllCoreThreads();
+                navConfiguration.threadPoolExecutor = threadPoolExecutor;
             } else {
-                navConfiguration.executorService = executorService;
+                navConfiguration.threadPoolExecutor = threadPoolExecutor;
             }
             if (mainHandler == null) {
                 navConfiguration.mainHandler = new Handler(Looper.getMainLooper());
