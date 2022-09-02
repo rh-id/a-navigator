@@ -122,6 +122,42 @@ public interface INavigator {
     void popUntil(String routeName);
 
     /**
+     * Replace current route with another route.
+     * Basically means fully pop current route and push the specified route
+     *
+     * @param routeName      route name, must not null
+     * @param args           arguments to be passed to this route, nullable
+     * @param navPopCallback callback to handle when this route pop/exit
+     * @param routeOptions   routeOptions to use for this route
+     * @throws NavigationRouteNotFound if route not found
+     */
+    void replace(String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions);
+
+    /**
+     * Same as {@link #replace(String, Serializable, NavPopCallback, RouteOptions)}
+     * with RouteOptions value null
+     */
+    void replace(String routeName, Serializable args, NavPopCallback navPopCallback);
+
+    /**
+     * Same as {@link #replace(String, Serializable, NavPopCallback, RouteOptions)}
+     * with args value null and RouteOptions value null
+     */
+    void replace(String routeName, NavPopCallback navPopCallback);
+
+    /**
+     * Same as {@link #replace(String, Serializable, NavPopCallback, RouteOptions)}
+     * with NavPopCallback value null and RouteOptions value null
+     */
+    void replace(String routeName, Serializable args);
+
+    /**
+     * Same as {@link #replace(String, Serializable, NavPopCallback, RouteOptions)}
+     * with Result value null, NavPopCallback value null and RouteOptions value null
+     */
+    void replace(String routeName);
+
+    /**
      * Same as {@link #retry()} but override original args with supplied args
      */
     void retry(Serializable overrideArgs);

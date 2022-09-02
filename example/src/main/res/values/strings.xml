@@ -34,4 +34,5 @@
     <string name="rebuild_view_from_pattern">Rebuild view from pattern</string>
     <string name="menu_dialog_home_page">Dialog Home Page</string>
     <string name="menu_extension_home_page">Extension Home Page</string>
+    <string name="replace_current_route_with_page_1">Replace current route with Page 1</string>
 </resources>

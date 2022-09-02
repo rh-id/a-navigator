@@ -16,6 +16,7 @@ import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.RequireNavigator;
 import m.co.rh.id.anavigator.example.PageKeys;
 import m.co.rh.id.anavigator.example.R;
+import m.co.rh.id.anavigator.example.Routes;
 import m.co.rh.id.anavigator.exception.NavigationRouteNotFound;
 
 public class Bottom2Page extends StatefulView<Activity> implements RequireNavigator {
@@ -52,7 +53,7 @@ public class Bottom2Page extends StatefulView<Activity> implements RequireNaviga
                 mNavigator.reBuildRoute(counter);
             } catch (NavigationRouteNotFound e) {
                 Toast.makeText(activity, e.getMessage(),
-                        Toast.LENGTH_SHORT)
+                                Toast.LENGTH_SHORT)
                         .show();
             }
         });
@@ -60,8 +61,19 @@ public class Bottom2Page extends StatefulView<Activity> implements RequireNaviga
         rebuildPatternButton.setOnClickListener(v ->
                 mNavigator.reBuildRoute(Pattern.compile("^" + PageKeys.BOTTOM_PAGE)));
 
+        MaterialButton replaceButton = view.findViewById(R.id.button_replace_bottom_page);
+        replaceButton.setOnClickListener(v -> {
+            try {
+                mNavigator.replace(Routes.PAGE_1);
+            } catch (NavigationRouteNotFound e) {
+                Toast.makeText(activity, e.getMessage(),
+                                Toast.LENGTH_SHORT)
+                        .show();
+            }
+        });
+
         Toast.makeText(activity, activity.getString(R.string.bottom_page_2),
-                Toast.LENGTH_SHORT)
+                        Toast.LENGTH_SHORT)
                 .show();
         return view;
     }

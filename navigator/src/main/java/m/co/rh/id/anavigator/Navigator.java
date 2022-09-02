@@ -210,10 +210,18 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public boolean pop(Serializable result) {
-        return popInternal(result, true);
+        return popInternal(result);
+    }
+
+    private boolean popInternal(Serializable result) {
+        return popInternal(result, true, true);
     }
 
     private boolean popInternal(Serializable result, boolean triggerCheckAndShowDialog) {
+        return popInternal(result, triggerCheckAndShowDialog, true);
+    }
+
+    private boolean popInternal(Serializable result, boolean triggerCheckAndShowDialog, boolean exitWhenStackEmpty) {
         if (mIsNavigating) {
             // if this pop is invoke during initState or buildView or dispose, add to pending
             mPendingNavigatorRoute.add(() -> pop(result));
@@ -254,11 +262,13 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             resetViewNavigator(existingViewAnimator.getCurrentView());
             // cont pop
             popInitialRoute(result);
-            int activityResult = Activity.RESULT_CANCELED;
-            if (result != null) {
-                activityResult = Activity.RESULT_OK;
+            if (exitWhenStackEmpty) {
+                int activityResult = Activity.RESULT_CANCELED;
+                if (result != null) {
+                    activityResult = Activity.RESULT_OK;
+                }
+                setActivityResultAndFinish(activityResult, result);
             }
-            setActivityResultAndFinish(activityResult, result);
             mIsNavigating = false;
         }
         return false;
@@ -635,6 +645,32 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     @Override
     public void popUntil(String routeName) {
         popUntil(routeName, null);
+    }
+
+    @Override
+    public void replace(String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
+        popInternal(null, false, false);
+        push(routeName, args, navPopCallback, routeOptions);
+    }
+
+    @Override
+    public void replace(String routeName, Serializable args, NavPopCallback navPopCallback) {
+        replace(routeName, args, navPopCallback, null);
+    }
+
+    @Override
+    public void replace(String routeName, NavPopCallback navPopCallback) {
+        replace(routeName, null, navPopCallback, null);
+    }
+
+    @Override
+    public void replace(String routeName, Serializable args) {
+        replace(routeName, args, null, null);
+    }
+
+    @Override
+    public void replace(String routeName) {
+        replace(routeName, null, null, null);
     }
 
     @Override
