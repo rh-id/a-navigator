@@ -661,7 +661,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 currentNavRoute.getRouteName(),
                 overrideArgs,
                 currentNavRoute.getNavPopCallback(),
-                null);
+                currentNavRoute.getRouteOptions());
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
