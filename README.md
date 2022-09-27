@@ -257,9 +257,9 @@ public class MyApplication extends Application {
 ## Example Projects
 <ul>
 <li>https://github.com/rh-id/a-news-provider</li>
-<li>https://github.com/rh-id/a-flash-deck</li>
+<li>https://github.com/rh-id/a-flash-deck (Multi activity)</li>
 <li>https://github.com/rh-id/a-medic-log</li>
-<li>https://github.com/rh-id/a-personal-stuff</li>
+<li>https://github.com/rh-id/a-personal-stuff (Multi module)</li>
 </ul>
 
 ## Support this project
