@@ -45,6 +45,7 @@ import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.annotation.NavRouteIndex;
 import m.co.rh.id.anavigator.annotation.NavViewNavigator;
 import m.co.rh.id.anavigator.component.INavigator;
+import m.co.rh.id.anavigator.component.NavActivity;
 import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
@@ -86,6 +87,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private final List<NavOnRouteChangedListener> mNavOnRouteChangedListenerList;
     private final ThreadPoolExecutor mThreadPool;
     private final Handler mHandler;
+    private int mActivityDefaultScreenOrientation;
 
     /**
      * @param activityClass activity class that this navigator handles
@@ -187,6 +189,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             initViewNavigator();
         }
         onRouteChanged(currentRoute, newRoute);
+        checkAndConfigureRequestOrientation();
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
             mPendingNavigatorRoute.pop().run();
@@ -247,6 +250,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             if (triggerCheckAndShowDialog) {
                 checkAndShowDialog();
             }
+            rollbackRequestOrientation();
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
                 mPendingNavigatorRoute.pop().run();
@@ -1044,6 +1048,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                         }
                     }
                     viewAnimator.setDisplayedChild(viewAnimator.getChildCount() - 1);
+                    checkAndConfigureRequestOrientation();
                     mIsNavigating = false;
                     if (!mPendingNavigatorRoute.isEmpty()) {
                         mPendingNavigatorRoute.pop().run();
@@ -1086,6 +1091,22 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         initNavigatorState(viewAnimator);
     }
 
+    private void checkAndConfigureRequestOrientation() {
+        StatefulView currentRoute = mNavRouteStack.peek().getStatefulView();
+        if (currentRoute instanceof NavActivity.RequestOrientation) {
+            Activity activity = getActivity();
+            int routeOrientation = ((NavActivity.RequestOrientation) currentRoute).getRequestedOrientation();
+            if (activity.getRequestedOrientation() != routeOrientation) {
+                activity.setRequestedOrientation(routeOrientation);
+            }
+        }
+    }
+
+    private void rollbackRequestOrientation() {
+        Activity activity = getActivity();
+        activity.setRequestedOrientation(mActivityDefaultScreenOrientation);
+    }
+
     @Override
     public ACT getActivity() {
         return mActivity;
@@ -1095,6 +1116,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     public void onActivityCreated(Activity activity, Bundle bundle) {
         if (mActivityClass.isInstance(activity)) {
             mActivity = (ACT) activity;
+            mActivityDefaultScreenOrientation = activity.getRequestedOrientation();
             String packageName = activity.getPackageName();
             Integer versionCode = null;
             String versionName = null;
