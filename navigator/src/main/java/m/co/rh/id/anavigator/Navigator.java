@@ -250,7 +250,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             if (triggerCheckAndShowDialog) {
                 checkAndShowDialog();
             }
-            rollbackRequestOrientation();
+            checkAndConfigureRequestOrientation();
             mIsNavigating = false;
             if (!mPendingNavigatorRoute.isEmpty()) {
                 mPendingNavigatorRoute.pop().run();
@@ -1092,19 +1092,19 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     private void checkAndConfigureRequestOrientation() {
+        Activity activity = getActivity();
+        int activityOrientation = activity.getRequestedOrientation();
         StatefulView currentRoute = mNavRouteStack.peek().getStatefulView();
         if (currentRoute instanceof NavActivity.RequestOrientation) {
-            Activity activity = getActivity();
             int routeOrientation = ((NavActivity.RequestOrientation) currentRoute).getRequestedOrientation();
-            if (activity.getRequestedOrientation() != routeOrientation) {
+            if (activityOrientation != routeOrientation) {
                 activity.setRequestedOrientation(routeOrientation);
             }
+        } else {
+            if (activityOrientation != mActivityDefaultScreenOrientation) {
+                activity.setRequestedOrientation(mActivityDefaultScreenOrientation);
+            }
         }
-    }
-
-    private void rollbackRequestOrientation() {
-        Activity activity = getActivity();
-        activity.setRequestedOrientation(mActivityDefaultScreenOrientation);
     }
 
     @Override
