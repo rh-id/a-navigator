@@ -15,6 +15,7 @@ public interface NavActivity {
 
         /**
          * Requested orientation values that you want Navigator to set.
+         * This method is called after StatefulView.createView
          *
          * @return ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED by default
          * @see <a href="https://developer.android.com/reference/android/app/Activity#setRequestedOrientation(int)">possible values</a>
