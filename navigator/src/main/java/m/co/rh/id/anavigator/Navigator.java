@@ -1042,6 +1042,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                         }
                     }
                     viewAnimator.displayLast();
+                    checkAndShowDialog();
                     checkAndConfigureRequestOrientation();
                     mIsNavigating = false;
                     if (!mPendingNavigatorRoute.isEmpty()) {
