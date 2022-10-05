@@ -3,7 +3,6 @@ package m.co.rh.id.anavigator;
 import android.app.Activity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ViewAnimator;
 
 import java.io.Serializable;
 
@@ -17,7 +16,7 @@ class ViewNavigator<ACT extends Activity, SV extends StatefulView> extends Navig
     }
 
     @Override
-    protected ViewAnimator getViewAnimator() {
+    protected NavViewLayout getViewAnimator() {
         ViewGroup viewGroup = getActivity().findViewById(mViewGroupContainerId);
         if (viewGroup == null) {
             return null;
@@ -26,7 +25,7 @@ class ViewNavigator<ACT extends Activity, SV extends StatefulView> extends Navig
     }
 
     @Override
-    protected void setViewAnimator(ACT activity, ViewAnimator viewAnimator) {
+    protected void setViewAnimator(ACT activity, NavViewLayout viewAnimator) {
         ViewGroup viewGroup = activity.findViewById(mViewGroupContainerId);
         if (viewGroup != null) {
             viewGroup.addView(viewAnimator);
@@ -48,7 +47,7 @@ class ViewNavigator<ACT extends Activity, SV extends StatefulView> extends Navig
         if (activity != null) {
             ViewGroup viewGroup = activity.findViewById(mViewGroupContainerId);
             if (viewGroup != null) {
-                ViewAnimator viewAnimator = getViewAnimator();
+                NavViewLayout viewAnimator = getViewAnimator();
                 if (viewAnimator == null) {
                     super.initViewAnimator();
                 }

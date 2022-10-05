@@ -1,6 +1,5 @@
 package m.co.rh.id.anavigator;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.ComponentCallbacks2;
@@ -17,7 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.ViewAnimator;
+import android.widget.FrameLayout;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -181,9 +180,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (newRouteStatefulView instanceof StatefulViewDialog) {
             ((StatefulViewDialog) newRouteStatefulView).showDialog(getActivity());
         } else {
-            ViewAnimator existingViewAnimator = getViewAnimator();
+            NavViewLayout existingViewAnimator = getViewAnimator();
             View view = newRouteStatefulView.buildView(mActivity, existingViewAnimator);
-            existingViewAnimator.addView(view);
+            existingViewAnimator.addToStack(view);
             existingViewAnimator.showNext();
             // try to init view navigator everytime new route is pushed
             initViewNavigator();
@@ -197,7 +196,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         mNavSnapshotHandler.saveState(mNavRouteStack);
     }
 
-    protected ViewAnimator getViewAnimator() {
+    protected NavViewLayout getViewAnimator() {
         return mActivity.findViewById(mViewAnimatorId);
     }
 
@@ -237,15 +236,15 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             if (currentRouteStatefulView instanceof StatefulViewDialog) {
                 popStack(null, result);
             } else {
-                ViewAnimator existingViewAnimator = getViewAnimator();
+                NavViewLayout existingViewAnimator = getViewAnimator();
                 // check for route options
                 View currentView = existingViewAnimator.getCurrentView();
                 existingViewAnimator.showPrevious();
                 // Try reset view navigator before pop
                 resetViewNavigator(currentView);
                 // cont pop
-                popStack(existingViewAnimator.getCurrentView(), result);
-                existingViewAnimator.removeView(currentView);
+                popStack(currentView, result);
+                existingViewAnimator.removeFromStack(currentView);
             }
             if (triggerCheckAndShowDialog) {
                 checkAndShowDialog();
@@ -262,7 +261,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             return true;
         } else {
             // Try reset view navigator before pop
-            ViewAnimator existingViewAnimator = getViewAnimator();
+            NavViewLayout existingViewAnimator = getViewAnimator();
             resetViewNavigator(existingViewAnimator.getCurrentView());
             // cont pop
             popInitialRoute(result);
@@ -692,9 +691,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             statefulViewDialog.dispose(getActivity());
         } else {
             statefulView.dispose(mActivity);
-            ViewAnimator existingViewAnimator = getViewAnimator();
-            View currentView = existingViewAnimator.getCurrentView();
-            existingViewAnimator.removeView(currentView);
+            NavViewLayout existingViewAnimator = getViewAnimator();
+            existingViewAnimator.popStack();
         }
         mNavRouteStack.pop();
         push(currentNavRoute.getStatefulViewFactory(),
@@ -737,20 +735,17 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             statefulViewDialog.initDialog(getActivity());
             checkAndShowDialog();
         } else {
-            ViewAnimator viewAnimator = getViewAnimator();
+            NavViewLayout viewAnimator = getViewAnimator();
             int selectedIndex = calculateRouteIndexForViewAnimator(routeIndex);
-            View childView = viewAnimator.getChildAt(selectedIndex);
+            View childView = viewAnimator.getChildFromStack(selectedIndex);
             View currentView = viewAnimator.getCurrentView();
             View buildView = navRoute.getStatefulView().buildView(getActivity(), viewAnimator);
-            viewAnimator.setInAnimation(null);
-            viewAnimator.setOutAnimation(null);
-            viewAnimator.removeViewAt(selectedIndex);
-            viewAnimator.addView(buildView, selectedIndex);
+            viewAnimator.replaceStack(buildView, selectedIndex);
             if (childView == currentView) {
                 // animate only when current view is showing
                 viewAnimator.setInAnimation(mNavConfiguration.getDefaultReBuildEnterAnimation());
                 viewAnimator.setOutAnimation(mNavConfiguration.getDefaultReBuildExitAnimation());
-                viewAnimator.setDisplayedChild(selectedIndex);
+                viewAnimator.animateTo(selectedIndex);
             }
             initViewNavigator();
         }
@@ -798,7 +793,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             return;
         }
         mIsNavigating = true;
-        ViewAnimator newViewAnimator = createViewAnimator(mActivity, mViewAnimatorId, mNavConfiguration);
+        NavViewLayout newViewAnimator = createViewAnimator(mActivity, mViewAnimatorId, mNavConfiguration);
         for (int i = mNavRouteStack.size() - 1; i >= 0; i--) {
             NavRoute navRoute = mNavRouteStack.get(i);
             StatefulView statefulView = navRoute.getStatefulView();
@@ -806,10 +801,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 ((StatefulViewDialog) statefulView).initDialog(getActivity());
             } else {
                 View view = statefulView.buildView(mActivity, newViewAnimator);
-                newViewAnimator.addView(view);
+                newViewAnimator.addToStack(view);
             }
         }
-        newViewAnimator.setDisplayedChild(newViewAnimator.getChildCount() - 1);
+        newViewAnimator.displayLast();
         getViewAnimator().startAnimation(mNavConfiguration.getDefaultReBuildExitAnimation());
         setViewAnimator(mActivity, newViewAnimator);
         newViewAnimator.startAnimation(mNavConfiguration.getDefaultReBuildEnterAnimation());
@@ -913,7 +908,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (!mNavRouteStack.isEmpty()) {
             StatefulView statefulView = mNavRouteStack.peek().getStatefulView();
             if (statefulView instanceof NavOnBackPressed) {
-                ViewAnimator viewAnimator = getViewAnimator();
+                NavViewLayout viewAnimator = getViewAnimator();
                 ((NavOnBackPressed) statefulView).onBackPressed(viewAnimator.getCurrentView(),
                         mActivity, this);
                 return;
@@ -989,21 +984,20 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
     }
 
-    private ViewAnimator createViewAnimator(ACT activity, int viewAnimatorId, NavConfiguration navConfiguration) {
-        ViewAnimator viewAnimator = new CustomViewAnimator(activity, this);
+    private NavViewLayout createViewAnimator(ACT activity, int viewAnimatorId, NavConfiguration navConfiguration) {
+        NavViewLayout viewAnimator = new NavViewLayout(activity, this);
         viewAnimator.setId(viewAnimatorId);
         viewAnimator.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
-        viewAnimator.setAnimateFirstView(true);
         return viewAnimator;
     }
 
-    protected void setViewAnimator(ACT activity, ViewAnimator viewAnimator) {
+    protected void setViewAnimator(ACT activity, NavViewLayout viewAnimator) {
         activity.setContentView(viewAnimator);
     }
 
-    protected void initNavigatorState(ViewAnimator viewAnimator) {
+    protected void initNavigatorState(NavViewLayout viewAnimator) {
         // prepare loading view
         View loadingView = mNavConfiguration.getLoadingView();
         if (loadingView != null) {
@@ -1042,12 +1036,12 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                         if (statefulView instanceof StatefulViewDialog) {
                             ((StatefulViewDialog) statefulView).initDialog(getActivity());
                         } else {
-                            viewAnimator.addView(statefulView
+                            viewAnimator.addToStack(statefulView
                                     .buildView(mActivity, viewAnimator)
                             );
                         }
                     }
-                    viewAnimator.setDisplayedChild(viewAnimator.getChildCount() - 1);
+                    viewAnimator.displayLast();
                     checkAndConfigureRequestOrientation();
                     mIsNavigating = false;
                     if (!mPendingNavigatorRoute.isEmpty()) {
@@ -1085,7 +1079,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     protected void initViewAnimator() {
-        ViewAnimator viewAnimator = createViewAnimator(mActivity, mViewAnimatorId,
+        NavViewLayout viewAnimator = createViewAnimator(mActivity, mViewAnimatorId,
                 mNavConfiguration);
         setViewAnimator(mActivity, viewAnimator);
         initNavigatorState(viewAnimator);
@@ -1466,26 +1460,79 @@ class SnapshotHandler {
     }
 }
 
-/**
- * Custom view animator that automatically switch the inAnimation and outAnimation when showPrevious or showNext
- */
-@SuppressLint("ViewConstructor")
-@SuppressWarnings("rawtypes")
-class CustomViewAnimator extends ViewAnimator {
+class NavViewLayout extends FrameLayout {
 
+    private Animation mInAnimation;
+    private Animation mOutAnimation;
     private final Navigator mNavigator;
+    private final LinkedList<View> mViewStack;
 
-    public CustomViewAnimator(Context context, Navigator navigator) {
+    public NavViewLayout(Context context, Navigator navigator) {
         super(context);
         mNavigator = navigator;
+        mViewStack = new LinkedList<>();
     }
 
-    public CustomViewAnimator(Context context, AttributeSet attrs, Navigator navigator) {
+    public NavViewLayout(Context context, AttributeSet attrs, Navigator navigator) {
         super(context, attrs);
         mNavigator = navigator;
+        mViewStack = new LinkedList<>();
     }
 
-    @Override
+    public void addToStack(View view) {
+        mViewStack.add(view);
+    }
+
+    public void removeFromStack(View view) {
+        mViewStack.remove(view);
+    }
+
+    public void popStack() {
+        View poppedView = mViewStack.pop();
+        removeView(poppedView);
+    }
+
+    public void replaceStack(View view, int index) {
+        mViewStack.set(index, view);
+    }
+
+    public void displayLast() {
+        removeAllViews();
+        addView(mViewStack.getLast());
+    }
+
+    public void setInAnimation(Animation inAnimation) {
+        this.mInAnimation = inAnimation;
+    }
+
+    public void setOutAnimation(Animation outAnimation) {
+        this.mOutAnimation = outAnimation;
+    }
+
+    public void animateTo(int index) {
+        View currentView = getCurrentView();
+        View destView = mViewStack.get(index);
+        if (currentView != null) {
+            currentView.startAnimation(mOutAnimation);
+            removeView(currentView);
+        }
+        destView.startAnimation(mInAnimation);
+        addView(destView);
+    }
+
+    public View getCurrentView() {
+        return getChildAt(0);
+    }
+
+    public View getChildFromStack(int index) {
+        return mViewStack.get(index);
+    }
+
+    private int getCurrentViewIndex() {
+        View currentView = getCurrentView();
+        return mViewStack.indexOf(currentView);
+    }
+
     public void showPrevious() {
         NavConfiguration navConfiguration = mNavigator.getNavConfiguration();
         NavRoute currentRoute = mNavigator.getCurrentRoute();
@@ -1520,10 +1567,9 @@ class CustomViewAnimator extends ViewAnimator {
         }
         setInAnimation(inAnimation);
         setOutAnimation(outAnimation);
-        super.showPrevious();
+        animateTo(getCurrentViewIndex() - 1);
     }
 
-    @Override
     public void showNext() {
         NavConfiguration navConfiguration = mNavigator.getNavConfiguration();
         NavRoute currentRoute = mNavigator.getCurrentRoute();
@@ -1558,6 +1604,6 @@ class CustomViewAnimator extends ViewAnimator {
         }
         setInAnimation(inAnimation);
         setOutAnimation(outAnimation);
-        super.showNext();
+        animateTo(getCurrentViewIndex() + 1);
     }
 }
