@@ -29,6 +29,22 @@ public class RouteOptions implements Externalizable {
         return routeOptions;
     }
 
+    /**
+     * Helper method to setup enter and exit transition (using transition framework)
+     *
+     * @param enterTransitionResId enter transition resource id to be inflated using TransitionInflater.inflateTransition,
+     *                             if null means no transition
+     * @param exitTransitionResId  exit transition resource id to be inflated using TransitionInflater.inflateTransition,
+     *                             if null means no transition
+     * @return RouteOptions instance with enter and exit using transition framework setup
+     */
+    public static RouteOptions withTransition(Integer enterTransitionResId, Integer exitTransitionResId) {
+        TransitionRouteOptions routeOptions = new TransitionRouteOptions();
+        routeOptions.enterTransitionResId = enterTransitionResId;
+        routeOptions.exitTransitionResId = exitTransitionResId;
+        return routeOptions;
+    }
+
     private Integer enterAnimationResId;
     private Integer exitAnimationResId;
     private Integer popEnterAnimationResId;
@@ -93,6 +109,53 @@ public class RouteOptions implements Externalizable {
         tempIn = in.readInt();
         if (tempIn != nullInt) {
             popExitAnimationResId = tempIn;
+        }
+    }
+}
+
+class TransitionRouteOptions extends RouteOptions {
+    Integer enterTransitionResId;
+    Integer exitTransitionResId;
+
+    public TransitionRouteOptions() {
+        super();
+    }
+
+    public Integer getEnterTransitionResId() {
+        return enterTransitionResId;
+    }
+
+    public Integer getExitTransitionResId() {
+        return exitTransitionResId;
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        super.writeExternal(out);
+        int nullInt = -1;
+        if (enterTransitionResId != null) {
+            out.writeInt(enterTransitionResId);
+        } else {
+            out.writeInt(nullInt);
+        }
+        if (exitTransitionResId != null) {
+            out.writeInt(exitTransitionResId);
+        } else {
+            out.writeInt(nullInt);
+        }
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException {
+        super.readExternal(in);
+        int nullInt = -1;
+        int tempIn = in.readInt();
+        if (tempIn != nullInt) {
+            enterTransitionResId = tempIn;
+        }
+        tempIn = in.readInt();
+        if (tempIn != nullInt) {
+            exitTransitionResId = tempIn;
         }
     }
 }

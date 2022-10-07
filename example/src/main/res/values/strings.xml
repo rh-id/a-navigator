@@ -35,4 +35,6 @@
     <string name="menu_dialog_home_page">Dialog Home Page</string>
     <string name="menu_extension_home_page">Extension Home Page</string>
     <string name="replace_current_route_with_page_1">Replace current route with Page 1</string>
+    <string name="menu_animation_page">Animation Page</string>
+    <string name="animate_image">Animate Image</string>
 </resources>

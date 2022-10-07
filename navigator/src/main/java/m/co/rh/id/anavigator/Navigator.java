@@ -10,13 +10,17 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
+
+import androidx.transition.Scene;
+import androidx.transition.Transition;
+import androidx.transition.TransitionInflater;
+import androidx.transition.TransitionManager;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -1462,10 +1466,43 @@ class SnapshotHandler {
     }
 }
 
+/**
+ * Extend Scene because Scene doesn't have proper hashCode and equals calculation.
+ * Scene keys are cached in TransitionManager which uses ArrayMap internally.
+ * This ArrayMap has the same behavior as HashMap which depends on hashCode to set and remove value.
+ * If TransitionManager.setTransition is being called multiple times to the same SceneRoot and Layout instances,
+ * then it is possible for out of memory to happen since the internal ArrayMap keeps growing and old values never replaced.
+ */
+class NavScene extends Scene {
+
+    private View mLayout;
+
+    public NavScene(ViewGroup sceneRoot, View layout) {
+        super(sceneRoot, layout);
+        mLayout = layout;
+    }
+
+    @Override
+    public int hashCode() {
+        return getSceneRoot().hashCode() + mLayout.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NavScene)) return false;
+
+        NavScene navScene = (NavScene) o;
+
+        return getSceneRoot().equals(navScene.getSceneRoot()) && mLayout.equals(navScene.mLayout);
+    }
+}
+
 class NavViewLayout extends FrameLayout {
 
     private Animation mInAnimation;
     private Animation mOutAnimation;
+    private TransitionManager mTransitionManager;
     private final Navigator mNavigator;
     private final LinkedList<View> mViewStack;
 
@@ -1473,12 +1510,7 @@ class NavViewLayout extends FrameLayout {
         super(context);
         mNavigator = navigator;
         mViewStack = new LinkedList<>();
-    }
-
-    public NavViewLayout(Context context, AttributeSet attrs, Navigator navigator) {
-        super(context, attrs);
-        mNavigator = navigator;
-        mViewStack = new LinkedList<>();
+        mTransitionManager = new TransitionManager();
     }
 
     public void addToStack(View view) {
@@ -1514,12 +1546,39 @@ class NavViewLayout extends FrameLayout {
     public void animateTo(int index) {
         View currentView = getCurrentView();
         View destView = mViewStack.get(index);
-        if (currentView != null) {
-            currentView.startAnimation(mOutAnimation);
-            removeView(currentView);
+        int currentViewIdx = mViewStack.indexOf(currentView);
+        RouteOptions currentRouteOptions = mNavigator.getCurrentRoute().getRouteOptions();
+        Transition destTransition = null;
+        if (currentViewIdx > index) {
+            // show prev view
+            if (currentRouteOptions instanceof TransitionRouteOptions) {
+                Integer exitTransitionResId = ((TransitionRouteOptions) currentRouteOptions).exitTransitionResId;
+                if (exitTransitionResId != null) {
+                    destTransition = TransitionInflater.from(getContext()).inflateTransition(exitTransitionResId);
+                }
+            }
+        } else if (currentViewIdx < index) {
+            // show next view
+            if (currentRouteOptions instanceof TransitionRouteOptions) {
+                Integer enterTransitionResId = ((TransitionRouteOptions) currentRouteOptions).enterTransitionResId;
+                if (enterTransitionResId != null) {
+                    destTransition = TransitionInflater.from(getContext()).inflateTransition(enterTransitionResId);
+                }
+            }
         }
-        destView.startAnimation(mInAnimation);
-        addView(destView);
+        if (destTransition != null) {
+            Scene nextScene = new NavScene(this, destView);
+            mTransitionManager.setTransition(nextScene, destTransition);
+            mTransitionManager.transitionTo(nextScene);
+        } else {
+            // no transition, use default
+            if (currentView != null) {
+                currentView.startAnimation(mOutAnimation);
+                removeView(currentView);
+            }
+            destView.startAnimation(mInAnimation);
+            addView(destView);
+        }
     }
 
     public View getCurrentView() {

@@ -28,5 +28,9 @@
             android:id="@+id/nav_extension_home"
             android:icon="@drawable/ic_menu_camera"
             android:title="@string/menu_extension_home_page" />
+        <item
+            android:id="@+id/nav_animation_page"
+            android:icon="@drawable/ic_menu_camera"
+            android:title="@string/menu_animation_page" />
     </group>
 </menu>
