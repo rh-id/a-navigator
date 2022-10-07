@@ -1573,10 +1573,14 @@ class NavViewLayout extends FrameLayout {
         } else {
             // no transition, use default
             if (currentView != null) {
-                currentView.startAnimation(mOutAnimation);
+                if (mOutAnimation != null) {
+                    currentView.startAnimation(mOutAnimation);
+                }
                 removeView(currentView);
             }
-            destView.startAnimation(mInAnimation);
+            if (mInAnimation != null) {
+                destView.startAnimation(mInAnimation);
+            }
             addView(destView);
         }
     }
