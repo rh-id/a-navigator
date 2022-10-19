@@ -22,7 +22,6 @@
         android:layout_below="@id/text_title"
         android:layout_alignStart="@id/text_title"
         android:layout_alignParentEnd="true"
-        android:layout_marginStart="@dimen/a_navigator_extension_dialog_text_margin"
         android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
         android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin"
         android:textSize="@dimen/a_navigator_extension_dialog_text_nav_menu" />
