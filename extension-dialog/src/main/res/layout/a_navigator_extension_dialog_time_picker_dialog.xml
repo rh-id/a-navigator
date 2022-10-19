@@ -1,39 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:minWidth="@dimen/a_navigator_extension_dialog_min_width"
-    android:orientation="vertical">
+    android:minWidth="@dimen/a_navigator_extension_dialog_min_width">
 
     <TimePicker
         android:id="@+id/time_picker"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
         android:layout_margin="@dimen/a_navigator_extension_dialog_text_margin" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="end"
-        android:orientation="horizontal">
+    <Button
+        android:id="@+id/button_cancel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/time_picker"
+        android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_toStartOf="@id/button_ok"
+        android:backgroundTint="@color/red"
+        android:text="@string/a_navigator_extension_dialog_cancel" />
 
-        <Button
-            android:id="@+id/button_cancel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
-            android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin"
-            android:backgroundTint="@color/red"
-            android:text="@string/a_navigator_extension_dialog_cancel" />
-
-        <Button
-            android:id="@+id/button_ok"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
-            android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin"
-            android:text="@string/a_navigator_extension_dialog_ok" />
-
-    </LinearLayout>
-</LinearLayout>
+    <Button
+        android:id="@+id/button_ok"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/time_picker"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin"
+        android:text="@string/a_navigator_extension_dialog_ok" />
+</RelativeLayout>
