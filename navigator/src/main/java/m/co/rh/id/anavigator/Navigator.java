@@ -8,8 +8,10 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.ArrayMap;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,8 +35,10 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -1289,6 +1293,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void onTrimMemory(int flag) {
+        NavViewLayout viewAnimator = getViewAnimator();
+        if (viewAnimator != null) {
+            viewAnimator.clearCache();
+        }
         if (!mNavRouteStack.isEmpty()) {
             for (NavRoute navRoute : mNavRouteStack) {
                 StatefulView statefulView = navRoute.getStatefulView();
@@ -1505,12 +1513,44 @@ class NavViewLayout extends FrameLayout {
     private TransitionManager mTransitionManager;
     private final Navigator mNavigator;
     private final LinkedList<View> mViewStack;
+    private Map<Integer, Animation> mAnimationCache;
+    private Map<Integer, Transition> mTransitionCache;
 
     public NavViewLayout(Context context, Navigator navigator) {
         super(context);
         mNavigator = navigator;
         mViewStack = new LinkedList<>();
         mTransitionManager = new TransitionManager();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            mAnimationCache = new ArrayMap<>();
+            mTransitionCache = new ArrayMap<>();
+        } else {
+            mAnimationCache = new HashMap<>();
+            mTransitionCache = new HashMap<>();
+        }
+    }
+
+    public void clearCache() {
+        mAnimationCache.clear();
+        mTransitionCache.clear();
+    }
+
+    private Transition getTransitionFromCache(Integer transitionId) {
+        Transition transition = mTransitionCache.get(transitionId);
+        if (transition == null) {
+            transition = TransitionInflater.from(getContext()).inflateTransition(transitionId);
+            mTransitionCache.put(transitionId, transition);
+        }
+        return transition;
+    }
+
+    private Animation getAnimationFromCache(Integer animationId) {
+        Animation animation = mAnimationCache.get(animationId);
+        if (animation == null) {
+            animation = AnimationUtils.loadAnimation(getContext(), animationId);
+            mAnimationCache.put(animationId, animation);
+        }
+        return animation;
     }
 
     public void addToStack(View view) {
@@ -1554,7 +1594,7 @@ class NavViewLayout extends FrameLayout {
             if (currentRouteOptions instanceof TransitionRouteOptions) {
                 Integer exitTransitionResId = ((TransitionRouteOptions) currentRouteOptions).exitTransitionResId;
                 if (exitTransitionResId != null) {
-                    destTransition = TransitionInflater.from(getContext()).inflateTransition(exitTransitionResId);
+                    destTransition = getTransitionFromCache(exitTransitionResId);
                 }
             }
         } else if (currentViewIdx < index) {
@@ -1562,7 +1602,7 @@ class NavViewLayout extends FrameLayout {
             if (currentRouteOptions instanceof TransitionRouteOptions) {
                 Integer enterTransitionResId = ((TransitionRouteOptions) currentRouteOptions).enterTransitionResId;
                 if (enterTransitionResId != null) {
-                    destTransition = TransitionInflater.from(getContext()).inflateTransition(enterTransitionResId);
+                    destTransition = getTransitionFromCache(enterTransitionResId);
                 }
             }
         }
@@ -1609,8 +1649,7 @@ class NavViewLayout extends FrameLayout {
                 Integer inAnimationId = routeOptions.getPopEnterAnimationResId();
                 if (inAnimationId != null) {
                     try {
-                        inAnimation = AnimationUtils.loadAnimation(getContext(),
-                                inAnimationId);
+                        inAnimation = getAnimationFromCache(inAnimationId);
                     } catch (Throwable t) {
                         inAnimation = null;
                     }
@@ -1620,8 +1659,7 @@ class NavViewLayout extends FrameLayout {
                 Integer outAnimationId = routeOptions.getPopExitAnimationResId();
                 if (outAnimationId != null) {
                     try {
-                        outAnimation = AnimationUtils.loadAnimation(getContext(),
-                                outAnimationId);
+                        outAnimation = getAnimationFromCache(outAnimationId);
                     } catch (Throwable t) {
                         outAnimation = null;
                     }
@@ -1646,8 +1684,7 @@ class NavViewLayout extends FrameLayout {
                 Integer inAnimationId = routeOptions.getEnterAnimationResId();
                 if (inAnimationId != null) {
                     try {
-                        inAnimation = AnimationUtils.loadAnimation(getContext(),
-                                inAnimationId);
+                        inAnimation = getAnimationFromCache(inAnimationId);
                     } catch (Throwable t) {
                         inAnimation = null;
                     }
@@ -1657,8 +1694,7 @@ class NavViewLayout extends FrameLayout {
                 Integer outAnimationId = routeOptions.getExitAnimationResId();
                 if (outAnimationId != null) {
                     try {
-                        outAnimation = AnimationUtils.loadAnimation(getContext(),
-                                outAnimationId);
+                        outAnimation = getAnimationFromCache(outAnimationId);
                     } catch (Throwable t) {
                         outAnimation = null;
                     }
