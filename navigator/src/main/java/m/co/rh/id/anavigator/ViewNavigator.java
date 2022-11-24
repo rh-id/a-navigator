@@ -17,7 +17,11 @@ class ViewNavigator<ACT extends Activity, SV extends StatefulView> extends Navig
 
     @Override
     protected NavViewLayout getViewAnimator() {
-        ViewGroup viewGroup = getActivity().findViewById(mViewGroupContainerId);
+        Activity activity = getActivity();
+        if (activity == null) {
+            return null;
+        }
+        ViewGroup viewGroup = activity.findViewById(mViewGroupContainerId);
         if (viewGroup == null) {
             return null;
         }

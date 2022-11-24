@@ -205,6 +205,9 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     protected NavViewLayout getViewAnimator() {
+        if (mActivity == null) {
+            return null;
+        }
         return mActivity.findViewById(mViewAnimatorId);
     }
 
