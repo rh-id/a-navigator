@@ -895,7 +895,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             if (!(navRoute.getStatefulView() instanceof StatefulViewDialog)) {
                 int routeIndex = findRouteIndex(navRoute);
                 if (routeIndex != -1) {
-                    result = getViewAnimator().getChildAt(
+                    result = getViewAnimator().getChildFromStack(
                             calculateRouteIndexForViewAnimator(routeIndex)
                     );
                 }
