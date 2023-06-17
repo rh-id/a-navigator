@@ -4,12 +4,10 @@ plugins {
 }
 
 android {
-    compileSdkVersion 31
+    compileSdk 33
 
     defaultConfig {
         minSdkVersion 14
-        versionCode 1
-        versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -21,10 +19,17 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
+    namespace 'm.co.rh.id.anavigator.extension.dialog'
 }
 
 dependencies {
