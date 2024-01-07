@@ -254,6 +254,50 @@ public class MyApplication extends Application {
         }
 }
 ```
+
+## Proguard Configuration
+If you decide to enable minify and obfuscation you could use below rules to ensure this framework works.
+
+```
+-keep class m.co.rh.id.anavigator.**
+-keep interface m.co.rh.id.anavigator.**
+-keep enum m.co.rh.id.anavigator.**
+
+-keep @m.co.rh.id.anavigator.annotation.** class * {*;}
+
+-keepclasseswithmembers class * {
+    @m.co.rh.id.anavigator.annotation.** <methods>;
+}
+
+-keepclasseswithmembers class * {
+    @m.co.rh.id.anavigator.annotation.** <fields>;
+}
+
+-keepclasseswithmembers class * {
+    @m.co.rh.id.anavigator.annotation.** <init>(...);
+}
+
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+-keepclassmembers class * implements java.io.Externalizable {
+    static final long serialVersionUID;
+    static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+    void readExternal(java.io.ObjectInput);
+    void writeExternal(java.io.ObjectInput);
+}
+```
+
 ## Example Projects
 <ul>
 <li>https://github.com/rh-id/a-news-provider</li>
