@@ -1101,7 +1101,14 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private void checkAndConfigureRequestOrientation() {
         Activity activity = getActivity();
         int activityOrientation = activity.getRequestedOrientation();
-        StatefulView currentRoute = mNavRouteStack.peek().getStatefulView();
+        NavRoute navRoute = mNavRouteStack.peek();
+        if (navRoute == null) {
+            if (activityOrientation != mActivityDefaultScreenOrientation) {
+                activity.setRequestedOrientation(mActivityDefaultScreenOrientation);
+            }
+            return;
+        }
+        StatefulView currentRoute = navRoute.getStatefulView();
         if (currentRoute instanceof NavActivity.RequestOrientation) {
             int routeOrientation = ((NavActivity.RequestOrientation) currentRoute).getRequestedOrientation();
             if (activityOrientation != routeOrientation) {
