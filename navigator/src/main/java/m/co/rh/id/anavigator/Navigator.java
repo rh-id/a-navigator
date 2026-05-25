@@ -292,7 +292,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         boolean isAnnotationInjection = mNavConfiguration.isEnableAnnotationInjection();
         List<Field> fieldList = new ArrayList<>();
         if (isAnnotationInjection) {
-            fieldList = Arrays.asList(statefulView.getClass().getDeclaredFields());
+            Class<?> clazz = statefulView.getClass();
+            while (clazz != null && clazz != Object.class) {
+                fieldList.addAll(Arrays.asList(clazz.getDeclaredFields()));
+                clazz = clazz.getSuperclass();
+            }
         }
         boolean isFieldNotEmpty = !fieldList.isEmpty();
         if (statefulView instanceof RequireNavigator) {
