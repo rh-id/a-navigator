@@ -256,7 +256,12 @@ public class MyApplication extends Application {
 ```
 
 ## Proguard Configuration
-If you decide to enable minify and obfuscation you could use below rules to ensure this framework works.
+If you decide to enable minify and obfuscation (R8), **no manual ProGuard rules are required as of a-navigator v0.0.72**. The published AAR bundles consumer rules via `consumerProguardFiles` (see `navigator/consumer-rules.pro`) that keep the reflection-based annotated-field injection intact: `Navigator.injectStatefulView` injects `@NavInject` / `@NavRouteIndex` / `@NavViewNavigator` annotated fields via runtime reflection, which is invisible to R8 — the consumer rules keep the annotation classes by name and keep every annotated field together with its annotations so the injection keeps working under minification.
+
+This is verified automatically by the `:r8-smoke` module: a minimal harness app that consumes the library exactly like a real consumer, builds MINIFIED (`minifyEnabled true`), and runs instrumented tests against that minified build. Its `verifyR8Mapping` Gradle task additionally parses the R8 `mapping.txt` on every release build and fails if obfuscation is disabled or if the pinned annotation classes are no longer identity-named.
+
+### For consumers on a-navigator v0.0.71 or older
+Older versions ship no consumer rules; you must add the rules below manually to your app. The Serializable/Externalizable part remains relevant even on newer versions if you rely on route-state restoration: the Navigator itself auto-persists route state (including `NavRoute` args) to your `cacheDir` via its saveState/loadSnapshot mechanism, so the rules matter whenever your `NavRoute` args — or the objects they contain — are `Serializable`.
 
 ```
 -keep class m.co.rh.id.anavigator.**

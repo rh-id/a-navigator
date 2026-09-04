@@ -1,0 +1,48 @@
+name: Android Emulator Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  r8-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+          cache: gradle
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: run R8 consumer smoke tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 27
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./gradlew :r8-smoke:connectedReleaseAndroidTest
+
+      - name: upload androidTest reports
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: r8-smoke-androidTest-reports
+          path: |
+            r8-smoke/build/reports/androidTests/
+            r8-smoke/build/outputs/androidTest-results/
+          if-no-files-found: ignore

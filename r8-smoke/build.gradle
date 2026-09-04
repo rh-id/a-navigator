@@ -1,0 +1,190 @@
+plugins {
+    // version omitted: AGP is already on the build classpath via the root build.gradle
+    // (com.android.library 8.2.0 apply via buildscript) and com.android.application
+    // ships in the same artifact.
+    id 'com.android.application'
+}
+
+android {
+    namespace 'm.co.rh.id.anavigator.r8smoke'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId 'm.co.rh.id.anavigator.r8smoke'
+        minSdk 21
+        targetSdk 33
+        versionCode 1
+        versionName '1.0'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    // Instrumented tests must run against the MINIFIED release app - that is the entire
+    // purpose of this module (consumer-side guard for the library consumer-rules.pro).
+    testBuildType 'release'
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources false
+            signingConfig signingConfigs.debug
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            testProguardFiles file('test-rules.pro')
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // The library under test, consumed exactly like a real consumer would.
+    implementation project(':navigator')
+    implementation project(':extension-dialog')
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'androidx.test:core:1.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    // NOTE: no androidTest-scope kotlin-stdlib / androidx.tracing needed. AGP 8.2 DOES
+    // minify the test APK (see build/outputs/mapping/releaseAndroidTest/mapping.txt), and
+    // classes whose coordinates also exist in the app APK are deduped OUT of the test APK,
+    // so extra androidTest deps for them are inert. The test APK resolves those classes
+    // from the (minified) app APK at runtime instead - which is why proguard-rules.pro
+    // keeps androidx.tracing.Trace and kotlin.** identity-named.
+}
+
+// ---------------------------------------------------------------------------
+// Consumer-side obfuscation/shrink guard.
+//
+// The navigator AAR ships consumer-rules.pro that keeps the annotation classes
+// read reflectively by Navigator.injectStatefulView (@NavInject /
+// @NavRouteIndex / @NavViewNavigator) and keeps the fields annotated with
+// them together with their annotations. This task reads the R8 mapping
+// produced for this harness's minified release build and proves two things
+// that would otherwise only surface when someone hand-inspects the mapping:
+//   1. obfuscation is actually ACTIVE - a rules regression that silently
+//      disables renaming (e.g. a stray -dontobfuscate) must fail the build;
+//   2. every consumer-rule-pinned class stays IDENTITY-named (mapped to
+//      itself) - a rename there means the keep-by-name rules broke and the
+//      reflective Field.getAnnotation lookups in Navigator would stop
+//      matching at runtime in real consumer apps (silent injection no-op).
+// It is wired below to always run after the release minification, so the
+// shipped rules are verified on every release build (and thus on CI).
+// ---------------------------------------------------------------------------
+tasks.register('verifyR8Mapping', DefaultTask) {
+    group = 'verification'
+    description = 'Verifies the release R8 mapping: obfuscation is active and the ' +
+            'consumer-rule-pinned annotation classes stay identity-named under R8.'
+
+    // Deliberately no declared inputs/outputs: this task must re-execute on
+    // every minifyReleaseWithR8 run. Gradle finalizers run whenever the
+    // finalized task executes (even UP-TO-DATE), but a task WITH outputs could
+    // itself be skipped as UP-TO-DATE - keep it output-free so it never is.
+
+    // The mapping R8 writes for the minified release APK.
+    def mappingFile = layout.buildDirectory.file('outputs/mapping/release/mapping.txt')
+
+    // Classes kept BY NAME by navigator/consumer-rules.pro. Each must appear
+    // in mapping.txt mapped to ITSELF.
+    // NOTE: this check asserts CLASS names only - the member-level keeps
+    // (-keepclasseswithmembernames on annotated fields) are guarded
+    // empirically by the instrumented tests, which fail when the annotations
+    // no longer survive on the harness app's fields.
+    def pinnedClasses = [
+            // Annotation classes read reflectively by Navigator.injectStatefulView
+            // via Field.getAnnotation(...).
+            'm.co.rh.id.anavigator.annotation.NavInject',
+            'm.co.rh.id.anavigator.annotation.NavRouteIndex',
+            'm.co.rh.id.anavigator.annotation.NavViewNavigator',
+    ]
+
+    // Empirical baseline: the harness app pulls in navigator, extension-dialog,
+    // appcompat and their androidx transitive tree. Only unkept third-party
+    // classes get renamed, but that is still far more than this floor. The low
+    // threshold exists purely to fail loudly if obfuscation is silently
+    // disabled (which would drop the count to ~0).
+    def minRenamedClassLines = 100
+
+    doLast {
+        File file = mappingFile.get().asFile
+        if (!file.exists() || file.length() == 0) {
+            throw new GradleException(
+                    "R8 mapping file is missing or empty: ${file}\n" +
+                    'Build the minified release APK first (:r8-smoke:assembleRelease).')
+        }
+
+        // Class mapping lines start at column 0: "original -> obfuscated:".
+        // Member lines are indented (4 spaces) and header comments start with
+        // '#'; the anchored regex below matches class lines only.
+        def classLine = ~/^(\S+) -> (\S+):$/
+        int totalClassLines = 0
+        int renamedClassLines = 0
+        int removedClassLines = 0
+        def mappingByName = [:]
+
+        file.eachLine { line ->
+            def matcher = classLine.matcher(line)
+            if (matcher.matches()) {
+                String original = matcher.group(1)
+                String obfuscated = matcher.group(2)
+                totalClassLines++
+                mappingByName[original] = obfuscated
+                if (obfuscated.startsWith('R8$$REMOVED$$CLASS$$')) {
+                    // Class merged away by R8 - recorded in the mapping even with
+                    // obfuscation disabled, so it is NOT evidence of renaming.
+                    removedClassLines++
+                } else if (original != obfuscated) {
+                    renamedClassLines++
+                }
+            }
+        }
+
+        // Guard 1: obfuscation is active (merging removals counted separately
+        // above - they occur even under -dontobfuscate).
+        if (renamedClassLines < minRenamedClassLines) {
+            throw new GradleException(
+                    "R8 obfuscation appears disabled or weakened: only ${renamedClassLines} " +
+                    "of ${totalClassLines} class lines in the mapping were truly renamed " +
+                    "(${removedClassLines} are class-merging removals, not renames; " +
+                    "expected at least ${minRenamedClassLines}). " +
+                    'Check for -dontobfuscate or an over-broad keep that renames nothing.')
+        }
+
+        // Guard 2: consumer-rule-pinned classes stay identity-named.
+        List<String> broken = pinnedClasses.findAll { name ->
+            def mapped = mappingByName[name]
+            mapped == null || mapped != name
+        }
+        if (!broken.isEmpty()) {
+            def detail = broken.collect { name ->
+                def mapped = mappingByName[name]
+                mapped == null ? "${name} is MISSING from the mapping"
+                        : "${name} was renamed to ${mapped}"
+            }.join('\n  - ')
+            throw new GradleException(
+                    'navigator consumer-rules.pro keep-by-name regression - the following ' +
+                    'pinned classes are missing or renamed (reflective Field.getAnnotation ' +
+                    "lookups would fail at runtime in consumer apps):\n  - ${detail}")
+        }
+
+        logger.lifecycle('verifyR8Mapping: OK - obfuscation active ' +
+                "(${renamedClassLines}/${totalClassLines} class lines truly renamed, " +
+                "${removedClassLines} removed by class merging); " +
+                "all ${pinnedClasses.size()} consumer-rule-pinned classes are identity-named.")
+    }
+}
+
+// Always re-verify whenever the release minification runs - Gradle finalizers
+// execute whenever the finalized task runs, including UP-TO-DATE executions.
+afterEvaluate {
+    // tasks.named (rather than tasks.matching) so a future AGP rename of the
+    // minification task fails the configuration loudly instead of silently
+    // leaving the verification guard above unwired.
+    tasks.named('minifyReleaseWithR8') {
+        finalizedBy tasks.named('verifyR8Mapping')
+    }
+}
