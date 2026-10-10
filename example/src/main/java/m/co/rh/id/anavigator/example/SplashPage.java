@@ -20,6 +20,11 @@ public class SplashPage extends StatefulView<Activity> implements RequireNavigat
         // example simple timer, show 3 seconds then out
         Handler handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(() -> {
+            // guard: when this page was disposed (replaced/popped) before the
+            // timer fires, the navigator reference is already cleared
+            if (mNavigator == null) {
+                return;
+            }
             // The retry is done in provideNavigator instead of initState
             // this is because if saveState is enabled, this page will be restored
             // and provideNavigator will be executed but not initState

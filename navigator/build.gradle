@@ -51,6 +51,18 @@ afterEvaluate {
                 groupId = 'com.github.rh-id'
                 artifactId = 'a-navigator'
                 version = '0.0.1'
+                pom {
+                    licenses {
+                        license {
+                            name = 'MIT License'
+                            url = 'https://opensource.org/licenses/MIT'
+                        }
+                    }
+                    organization {
+                        name = 'Ruby Hartono'
+                        url = 'https://github.com/rh-id'
+                    }
+                }
             }
         }
     }

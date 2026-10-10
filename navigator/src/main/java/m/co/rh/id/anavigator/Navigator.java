@@ -178,8 +178,23 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     private void push(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
-        checkAndDismissDialog();
         NavRoute currentRoute = mNavRouteStack.peek();
+        NavRoute newRoute = doPush(statefulViewFactory, routeName, args, navPopCallback, routeOptions);
+        finishNavigation(currentRoute, newRoute);
+    }
+
+    /**
+     * Core of a push: mutates the route stack and swaps the displayed view only.
+     * It does NOT fire any route-changed event, does NOT release {@link #mIsNavigating},
+     * does NOT drain {@link #mPendingNavigatorRoute} and does NOT save any state.
+     * Always call {@link #finishNavigation(NavRoute, NavRoute)} afterwards to
+     * complete the navigation. This split allows callers such as
+     * {@link #replace(String, Serializable, NavPopCallback, RouteOptions)} and
+     * {@link #retry(Serializable)} to run view-stack cleanup between the view
+     * swap and the pending-routes drain/state save.
+     */
+    private NavRoute doPush(StatefulViewFactory statefulViewFactory, String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
+        checkAndDismissDialog();
         SV newRouteStatefulView = (SV) statefulViewFactory.newInstance(args, mActivity);
         NavRoute newRoute = new NavRoute(statefulViewFactory, navPopCallback, routeOptions, newRouteStatefulView, routeName, args, newRouteStatefulView.getKey());
         // push must be done before initState or buildView so that the newRouteStatefulView could get route information
@@ -195,7 +210,17 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             // try to init view navigator everytime new route is pushed
             initViewNavigator();
         }
-        onRouteChanged(currentRoute, newRoute);
+        return newRoute;
+    }
+
+    /**
+     * Tail of a navigation: fires the route-changed events, updates the requested
+     * orientation, releases {@link #mIsNavigating}, drains any navigation queued
+     * in {@link #mPendingNavigatorRoute} while {@link #mIsNavigating} was true and
+     * finally saves the state exactly once (the route stack is already final here).
+     */
+    private void finishNavigation(NavRoute previousRoute, NavRoute newRoute) {
+        onRouteChanged(previousRoute, newRoute);
         checkAndConfigureRequestOrientation();
         mIsNavigating = false;
         if (!mPendingNavigatorRoute.isEmpty()) {
@@ -667,8 +692,71 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void replace(String routeName, Serializable args, NavPopCallback navPopCallback, RouteOptions routeOptions) {
-        popInternal(null, false, false);
-        push(routeName, args, navPopCallback, routeOptions);
+        if (mIsNavigating) {
+            // It is possible that replace is invoked somewhere during initState or buildView
+            // put this invocation later after previous navigation is done
+            mPendingNavigatorRoute.add(() -> replace(routeName, args, navPopCallback, routeOptions));
+            return;
+        }
+        if (mNavRouteStack.isEmpty()) {
+            // nothing to replace, fallback to push
+            push(routeName, args, navPopCallback, routeOptions);
+            return;
+        }
+        // resolve the target factory BEFORE any mutation: an unknown route must
+        // throw without popping/disposing the current route or touching the view
+        StatefulViewFactory<ACT, SV> statefulViewFactory = mNavConfiguration.getNavMap().get(routeName);
+        if (statefulViewFactory == null) {
+            throw new NavigationRouteNotFound(routeName + " not found");
+        }
+        mIsNavigating = true;
+        NavRoute oldRoute = mNavRouteStack.peek();
+        StatefulView oldRouteStatefulView = oldRoute.getStatefulView();
+        View oldView = null;
+        if (oldRouteStatefulView instanceof StatefulViewDialog) {
+            ((StatefulViewDialog) oldRouteStatefulView).dismissWithoutPop(getActivity());
+            // pop the dialog route: disposes it, triggers onPop(null) callback
+            // and fires onRouteChanged(oldRoute -> route below it)
+            popStack(null, null);
+        } else {
+            NavViewLayout existingViewAnimator = getViewAnimator();
+            // keep the old view attached and inside the view stack for now,
+            // showNext() inside doPush needs it to compute the display index.
+            // It is removed from the view stack right after doPush.
+            oldView = existingViewAnimator.getCurrentView();
+            // try reset view navigator before pop
+            resetViewNavigator(oldView);
+            // pop the route only (no showPrevious here): disposes it, triggers
+            // onPop(currentView) callback and fires onRouteChanged(oldRoute -> route below it).
+            // The displayed view is swapped exactly once by the single
+            // showNext() inside doPush, this keeps the view stack in sync
+            // with the route stack for every RouteOptions type.
+            popStack(oldView, null);
+        }
+        // route below the popped one, needed for the route-changed event pair
+        NavRoute underRoute = mNavRouteStack.peek();
+        NavRoute newRoute = doPush(statefulViewFactory, routeName, args, navPopCallback, routeOptions);
+        if (oldView != null) {
+            NavViewLayout existingViewAnimator = getViewAnimator();
+            if (newRoute.getStatefulView() instanceof StatefulViewDialog) {
+                // the dialog branch of doPush does not swap the displayed
+                // child: show the view of the route below the replaced one,
+                // same as what the popped route leaves behind. When the
+                // replaced route was the initial one there is no route below,
+                // the old (already disposed) view stays attached like the
+                // previous implementation did.
+                int underViewIndex = existingViewAnimator.indexInStack(oldView) - 1;
+                if (underViewIndex >= 0) {
+                    existingViewAnimator.animateTo(underViewIndex);
+                }
+            }
+            // remove the replaced view from the view stack before draining
+            // pending routes and saving the state, the layout child itself was
+            // already swapped by showNext() inside doPush for a non-dialog
+            // destination, or by animateTo() above for a dialog destination
+            existingViewAnimator.removeFromStack(oldView);
+        }
+        finishNavigation(underRoute, newRoute);
     }
 
     @Override
@@ -697,29 +785,57 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mPendingNavigatorRoute.add(() -> retry(overrideArgs));
             return;
         }
+        if (mNavRouteStack.isEmpty()) {
+            return;
+        }
         mIsNavigating = true;
         NavRoute currentNavRoute = mNavRouteStack.peek();
         StatefulView statefulView = currentNavRoute.getStatefulView();
+        View oldView = null;
         if (statefulView instanceof StatefulViewDialog) {
             StatefulViewDialog statefulViewDialog = ((StatefulViewDialog) statefulView);
             statefulViewDialog.dismissWithoutPop(getActivity());
             statefulViewDialog.dispose(getActivity());
         } else {
-            statefulView.dispose(mActivity);
             NavViewLayout existingViewAnimator = getViewAnimator();
-            existingViewAnimator.popStack();
+            // keep the old view attached and inside the view stack for now,
+            // showNext() inside doPush needs it to compute the display index.
+            // It is removed from the view stack right after doPush.
+            oldView = existingViewAnimator.getCurrentView();
+            // try reset view navigator before rebuild
+            resetViewNavigator(oldView);
+            statefulView.dispose(mActivity);
         }
         mNavRouteStack.pop();
-        push(currentNavRoute.getStatefulViewFactory(),
+        // route below the popped one, needed for the route-changed event
+        NavRoute underRoute = mNavRouteStack.peek();
+        NavRoute newRoute = doPush(currentNavRoute.getStatefulViewFactory(),
                 currentNavRoute.getRouteName(),
                 overrideArgs,
                 currentNavRoute.getNavPopCallback(),
                 currentNavRoute.getRouteOptions());
-        mIsNavigating = false;
-        if (!mPendingNavigatorRoute.isEmpty()) {
-            mPendingNavigatorRoute.pop().run();
+        if (oldView != null) {
+            NavViewLayout existingViewAnimator = getViewAnimator();
+            if (newRoute.getStatefulView() instanceof StatefulViewDialog) {
+                // the dialog branch of doPush does not swap the displayed
+                // child: show the view of the route below the rebuilt one,
+                // same as what the disposed route leaves behind. When the
+                // rebuilt route was the initial one there is no route below,
+                // the old (already disposed) view stays attached like the
+                // previous implementation did.
+                int underViewIndex = existingViewAnimator.indexInStack(oldView) - 1;
+                if (underViewIndex >= 0) {
+                    existingViewAnimator.animateTo(underViewIndex);
+                }
+            }
+            // remove the rebuilt view's previous instance from the view stack
+            // before draining pending routes and saving the state, the layout
+            // child itself was already swapped by showNext() inside doPush for
+            // a non-dialog destination, or by animateTo() above for a dialog
+            // destination
+            existingViewAnimator.removeFromStack(oldView);
         }
-        mNavSnapshotHandler.saveState(mNavRouteStack);
+        finishNavigation(underRoute, newRoute);
     }
 
     @Override
@@ -1398,6 +1514,14 @@ class SnapshotHandler {
         final File file = getFile();
         final Cipher encryptCipher = getEncryptCipher();
         if (file != null) {
+            // Defensive copy taken on the caller (main) thread: the background
+            // task below serializes the object while the main thread may keep
+            // mutating the live route stack (e.g. draining a pending
+            // navigation), which would throw ConcurrentModificationException,
+            // get swallowed and silently skip the save.
+            final Serializable stateToSave = serializable instanceof LinkedList
+                    ? new LinkedList<>((LinkedList) serializable)
+                    : serializable;
             mStateSnapshot = getExecutorService().submit(() -> {
                 if (!file.exists()) {
                     file.getParentFile().mkdirs();
@@ -1407,14 +1531,14 @@ class SnapshotHandler {
                     FileOutputStream fileOutputStream = new FileOutputStream(file);
                     BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream);
                     ObjectOutputStream oos = new ObjectOutputStream(bos);
-                    oos.writeObject(new SealedObject(serializable, encryptCipher));
+                    oos.writeObject(new SealedObject(stateToSave, encryptCipher));
                     oos.close();
                     bos.close();
                     fileOutputStream.close();
                 } catch (Throwable throwable) {
                     Log.e(TAG, "Failed to save state", throwable);
                 }
-                return serializable;
+                return stateToSave;
             });
         }
     }
@@ -1524,7 +1648,6 @@ class NavViewLayout extends FrameLayout {
 
     private Animation mInAnimation;
     private Animation mOutAnimation;
-    private TransitionManager mTransitionManager;
     private final Navigator mNavigator;
     private final LinkedList<View> mViewStack;
     private Map<Integer, Animation> mAnimationCache;
@@ -1534,7 +1657,6 @@ class NavViewLayout extends FrameLayout {
         super(context);
         mNavigator = navigator;
         mViewStack = new LinkedList<>();
-        mTransitionManager = new TransitionManager();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             mAnimationCache = new ArrayMap<>();
             mTransitionCache = new ArrayMap<>();
@@ -1575,6 +1697,13 @@ class NavViewLayout extends FrameLayout {
         mViewStack.remove(view);
     }
 
+    /**
+     * @return the index of the given view inside the view stack, -1 if not found
+     */
+    public int indexInStack(View view) {
+        return mViewStack.indexOf(view);
+    }
+
     public void popStack() {
         View poppedView = mViewStack.pop();
         removeView(poppedView);
@@ -1586,7 +1715,11 @@ class NavViewLayout extends FrameLayout {
 
     public void displayLast() {
         removeAllViews();
-        addView(mViewStack.getLast());
+        // guard: an empty view stack (e.g. a route stack consisting of dialogs
+        // only) has nothing to display, this used to throw NoSuchElement
+        if (!mViewStack.isEmpty()) {
+            addView(mViewStack.getLast());
+        }
     }
 
     public void setInAnimation(Animation inAnimation) {
@@ -1598,6 +1731,14 @@ class NavViewLayout extends FrameLayout {
     }
 
     public void animateTo(int index) {
+        if (index < 0 || index >= mViewStack.size()) {
+            // defensive clamp: never crash on IndexOutOfBoundsException and
+            // shield getCurrentRoute() from NPE on an empty route stack below
+            Log.e(NavViewLayout.class.getSimpleName(),
+                    "animateTo(" + index + ") out of bounds, mViewStack size="
+                            + mViewStack.size());
+            return;
+        }
         View currentView = getCurrentView();
         View destView = mViewStack.get(index);
         int currentViewIdx = mViewStack.indexOf(currentView);
@@ -1621,9 +1762,25 @@ class NavViewLayout extends FrameLayout {
             }
         }
         if (destTransition != null) {
+            // force-complete any pending or running transition on this scene
+            // root first: androidx.transition's TransitionManager.changeScene
+            // silently skips the whole scene swap when
+            // sPendingTransitions.contains(sceneRoot), which would swallow a
+            // same-frame consecutive navigation and leave the previous view
+            // displayed. The interrupted animation on rapid navigation is an
+            // acceptable visual cost.
+            TransitionManager.endTransitions(this);
             Scene nextScene = new NavScene(this, destView);
-            mTransitionManager.setTransition(nextScene, destTransition);
-            mTransitionManager.transitionTo(nextScene);
+            // Use the static go() instead of TransitionManager.setTransition
+            // plus transitionTo(): setTransition accumulates a permanent
+            // Scene -> Transition map entry per navigation and every NavScene
+            // strongly references its (soon discarded) route view, which leaks
+            // memory across a session. transitionTo(scene) only resolves the
+            // transition through that map right before invoking
+            // changeScene(scene, transition), so passing the transition
+            // directly to go() is behaviorally identical while the map is
+            // never populated.
+            TransitionManager.go(nextScene, destTransition);
         } else {
             // no transition, use default
             if (currentView != null) {

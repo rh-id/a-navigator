@@ -90,6 +90,12 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
         mShouldPop = false;
         Dialog dialog = initDialog(activity);
         if (dialog.isShowing()) {
+            // detach listeners before dismiss: dialog show/dismiss listener
+            // events are deferred to the main looper, they must not re-enter
+            // this instance after it was dismissed without pop (a queued
+            // onShow would re-arm mShouldPop and the following onDismiss
+            // would then trigger a pop on the wrong route)
+            detachDialogListeners(dialog);
             dialog.dismiss();
         }
         mActiveDialog = null;
@@ -100,10 +106,19 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
         super.dispose(activity);
         if (mActiveDialog != null) {
             mShouldPop = false;
+            // detach listeners before dismiss, see dismissWithoutPop:
+            // deferred dialog events must not re-enter this disposed instance
+            detachDialogListeners(mActiveDialog);
             mActiveDialog.dismiss();
         }
         mActiveDialog = null;
         mNavigator = null;
+    }
+
+    private void detachDialogListeners(Dialog dialog) {
+        dialog.setOnShowListener(null);
+        dialog.setOnDismissListener(null);
+        dialog.setOnCancelListener(null);
     }
 
     protected void onShowDialog(DialogInterface dialog) {
@@ -139,7 +154,9 @@ public class StatefulViewDialog<ACT extends Activity> extends StatefulView<ACT>
 
     @Override
     public final void onDismiss(DialogInterface dialog) {
-        if (mShouldPop) {
+        // guard mNavigator: a disposed instance must never trigger a pop,
+        // deferred dismiss events can still arrive after dispose
+        if (mShouldPop && mNavigator != null) {
             mNavigator.pop(getDialogResult());
         }
         onDismissDialog(dialog);
