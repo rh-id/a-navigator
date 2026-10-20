@@ -206,7 +206,14 @@ public interface INavigator {
 
     /**
      * Add callback listener to listen to changing route pop and push.
-     * The callback will be triggered after pop or push had happened
+     * The callback will be triggered after pop or push had happened.
+     * <p>
+     * The callback is ALSO fired exactly once after a saved-state restore
+     * (process death / activity recreation), with {@code previous == null} and
+     * {@code current} = the restored top route. Hosts that sync UI state from
+     * this listener (e.g. a back dispatcher callback's enabled state from
+     * {@link #shouldInterceptBack()}) therefore stay correct across restores
+     * without extra lifecycle hooks.
      */
     void addOnRouteChangedListener(NavOnRouteChangedListener navOnRouteChangedListener);
 
@@ -285,6 +292,68 @@ public interface INavigator {
      * let the currently displayed view handle back button else {@link #pop()}
      */
     void onBackPressed();
+
+    /**
+     * @return whether the NEXT back event will be consumed by this navigator.
+     * <p>
+     * Host apps implementing predictive back should use this to keep their
+     * back dispatcher callback enabled/disabled in sync: when this returns
+     * true the navigator will consume the next back press, when it returns
+     * false the host should let the system handle back (e.g. show the
+     * back-to-home animation).
+     * <p>
+     * Note that the answer only describes the NEXT back event, it must be
+     * re-checked whenever the route stack changes (e.g. from a
+     * NavOnRouteChangedListener) and after {@link #onBackCancelled()}.
+     */
+    default boolean shouldInterceptBack() {
+        return true;
+    }
+
+    /**
+     * Signal that a predictive back gesture has started.
+     * Only meaningful when {@link #shouldInterceptBack()} returned true for
+     * the gesture; otherwise the event is ignored by the navigator.
+     * <p>
+     * If the current route can be popped (stack size more than 1) and its
+     * StatefulView does NOT implement NavOnBackPressed, the navigator starts a
+     * speculative pop animation: the current page shrinks/slides following the
+     * gesture, revealing the previous page underneath.
+     * The actual route pop only happens when the gesture commits through
+     * {@link #onBackPressed()}.
+     *
+     * @param backEvent the gesture start event, host apps translate the
+     *                  platform/androidx gesture event into this library-owned
+     *                  type
+     */
+    default void onBackStarted(NavBackEvent backEvent) {
+        // leave blank, opt-in behavior
+    }
+
+    /**
+     * Signal that the ongoing predictive back gesture progressed.
+     * Only meaningful after {@link #onBackStarted(NavBackEvent)} was consumed
+     * by this navigator; the navigator updates the gesture-driven pop
+     * animation with the event progress (clamped to 0..1).
+     * <p>
+     * The actual route pop only happens when the gesture commits through
+     * {@link #onBackPressed()}.
+     *
+     * @param backEvent the gesture progress event
+     */
+    default void onBackProgressed(NavBackEvent backEvent) {
+        // leave blank, opt-in behavior
+    }
+
+    /**
+     * Signal that the ongoing predictive back gesture was cancelled (the user
+     * released the gesture below the commit threshold). The navigator restores
+     * the view state exactly as it was before the gesture started, the route
+     * stack is left untouched.
+     */
+    default void onBackCancelled() {
+        // leave blank, opt-in behavior
+    }
 
     /**
      * Signal to navigator that activity result is invoked,

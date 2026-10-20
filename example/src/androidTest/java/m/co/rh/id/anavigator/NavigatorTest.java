@@ -15,19 +15,28 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import m.co.rh.id.anavigator.component.INavigator;
+import m.co.rh.id.anavigator.component.NavBackEvent;
+import m.co.rh.id.anavigator.component.NavOnBackPressed;
+import m.co.rh.id.anavigator.component.NavOnRouteChangedListener;
 import m.co.rh.id.anavigator.example.MyApplication;
 import m.co.rh.id.anavigator.example.RawActivity;
 import m.co.rh.id.anavigator.example.Routes;
 import m.co.rh.id.anavigator.example.R;
+import m.co.rh.id.anavigator.example.SecondPage;
+import m.co.rh.id.anavigator.example.ThirdPage;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -425,6 +434,456 @@ public class NavigatorTest {
             assertTrue(nav.pop());
             assertTrue(isHomeDisplayed(activity));
         });
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 8. Predictive back gesture state machine
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Gesture event factory: touch point on the LEFT edge of the screen
+     * (progress 0 start), matching the physical back gesture.
+     */
+    private static NavBackEvent gestureStartEvent() {
+        return new NavBackEvent(10f, 500f, 0f);
+    }
+
+    private static NavBackEvent gestureProgressEvent(float progress) {
+        return new NavBackEvent(10f, 500f, progress);
+    }
+
+    private static NavViewLayout navLayout(RawActivity activity) {
+        return (NavViewLayout) activity.findViewById(NAV_ANIMATOR_ID);
+    }
+
+    private static int attachedChildCount(RawActivity activity) {
+        ViewGroup animator = activity.findViewById(NAV_ANIMATOR_ID);
+        return animator == null ? 0 : animator.getChildCount();
+    }
+
+    @Test
+    public void predictiveBack_shouldInterceptBack_truthTable() throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            // initial route is HOME_PAGE which implements NavOnBackPressed
+            assertTrue(nav.isInitialRoute());
+            assertTrue("stack==1 with NavOnBackPressed page must intercept back",
+                    nav.shouldInterceptBack());
+            // gesture at stack==1 must NOT attach anything (no animation, no flag)
+            nav.onBackStarted(gestureStartEvent());
+            assertEquals(1, attachedChildCount(activity));
+            nav.onBackCancelled();
+            // initial route WITHOUT NavOnBackPressed
+            nav.replace(Routes.SECOND_PAGE, null, null, null);
+            assertTrue(nav.isInitialRoute());
+            assertFalse("stack==1 without NavOnBackPressed page must NOT intercept back",
+                    nav.shouldInterceptBack());
+            // stack size > 1
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            assertTrue("stack>1 must intercept back", nav.shouldInterceptBack());
+            assertTrue(nav.pop());
+            // dialog route on top
+            MyApplication app = MyApplication.of(activity);
+            Serializable confirmArgs = app.getNavExtDialogConfig()
+                    .args_confirmDialog("title", "message");
+            nav.push(app.getNavExtDialogConfig().route_confirmDialog(), confirmArgs, null, null);
+            assertTrue(nav.getCurrentRoute().getStatefulView() instanceof StatefulViewDialog);
+            assertFalse("dialog route on top must NOT intercept back (dialog window"
+                    + " consumes back itself)", nav.shouldInterceptBack());
+            nav.pop();
+            assertTrue(isSecondDisplayed(activity));
+        });
+    }
+
+    @Test
+    public void predictiveBack_startedProgressedCommit_popsRouteOnce_andDisplaysPreviousPage()
+            throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            assertTrue(isSecondDisplayed(activity));
+            // gesture start: the previous page view is attached underneath
+            nav.onBackStarted(gestureStartEvent());
+            assertEquals("gesture start must attach the previous page view beneath",
+                    2, attachedChildCount(activity));
+            // gesture progress drives the animation transforms
+            nav.onBackProgressed(gestureProgressEvent(0.4f));
+            nav.onBackProgressed(gestureProgressEvent(1f));
+            assertEquals(2, attachedChildCount(activity));
+            // commit: exactly one pop, the previous page displayed, no standard
+            // pop animation (suppressed) and no crash
+            nav.onBackPressed();
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+        });
+        // the commit animation detaches the popped view asynchronously
+        await("commit animation removed the popped view", () -> {
+            AtomicBoolean ok = new AtomicBoolean(false);
+            mScenario.onActivity(activity ->
+                    ok.set(attachedChildCountSync(activity) == 1));
+            return ok.get();
+        });
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            // navigator must stay fully usable after the gesture commit
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            assertTrue(isSecondDisplayed(activity));
+            assertTrue(nav.pop());
+            assertTrue(isHomeDisplayed(activity));
+            assertTrue(nav.isInitialRoute());
+        });
+    }
+
+    /**
+     * Synchronous child-count read usable inside await().
+     */
+    private int attachedChildCountSync(RawActivity activity) {
+        ViewGroup animator = activity.findViewById(NAV_ANIMATOR_ID);
+        return animator == null ? 0 : animator.getChildCount();
+    }
+
+    @Test
+    public void predictiveBack_startedThenCancelled_routeIntact_singleChildRestored()
+            throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            assertTrue(isSecondDisplayed(activity));
+            nav.onBackStarted(gestureStartEvent());
+            nav.onBackProgressed(gestureProgressEvent(0.7f));
+            assertEquals(2, attachedChildCount(activity));
+            // gesture released below the commit threshold
+            nav.onBackCancelled();
+            // route stack untouched
+            assertEquals(Routes.SECOND_PAGE, nav.getCurrentRoute().getRouteName());
+            assertFalse(nav.isInitialRoute());
+            // NOTE: the display check must NOT run here - the revealed home
+            // view is detached only by the ~180ms restore-animation end action
+        });
+        // the cancel animation detaches the previous view asynchronously
+        await("cancel animation restored the single child", () -> {
+            AtomicBoolean ok = new AtomicBoolean(false);
+            mScenario.onActivity(activity ->
+                    ok.set(attachedChildCountSync(activity) == 1));
+            return ok.get();
+        });
+        mScenario.onActivity(activity -> {
+            // once the restore finished, the interrupted page is displayed again
+            assertTrue(isSecondDisplayed(activity));
+            // a regular back press after the cancelled gesture still pops
+            navigator(activity).onBackPressed();
+            assertEquals(Routes.HOME_PAGE, navigator(activity).getCurrentRoute().getRouteName());
+            assertTrue(navigator(activity).isInitialRoute());
+        });
+    }
+
+    @Test
+    public void predictiveBack_commitWithoutStarted_legacyPop() throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            assertTrue(isSecondDisplayed(activity));
+            // 3-button-navigation path: back press without any gesture event,
+            // must behave exactly like the legacy pop
+            nav.onBackPressed();
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+            assertEquals(1, attachedChildCount(activity));
+        });
+    }
+
+    @Test
+    public void predictiveBack_interceptorPage_noAnimation_commitDeliversPageBackHandling()
+            throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            // push a HOME_PAGE instance ON TOP of home: it implements
+            // NavOnBackPressed, so the gesture must NOT animate a speculative
+            // pop (the page's back behavior is unknown)
+            nav.push(Routes.HOME_PAGE, Boolean.TRUE, null, null);
+            assertTrue(nav.getCurrentRoute().getStatefulView() instanceof NavOnBackPressed);
+            assertFalse(nav.isInitialRoute());
+            nav.onBackStarted(gestureStartEvent());
+            nav.onBackProgressed(gestureProgressEvent(0.5f));
+            assertEquals("no speculative pop animation may run for an interceptor page",
+                    1, attachedChildCount(activity));
+            // commit still delivers the legacy NavOnBackPressed semantics:
+            // HOME closes the drawer or pops
+            nav.onBackPressed();
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+            assertEquals(1, attachedChildCount(activity));
+        });
+    }
+
+    @Test
+    public void predictiveBack_popIssuedDuringGesture_autoCancels_noLeakedChild()
+            throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            nav.onBackStarted(gestureStartEvent());
+            assertEquals(2, attachedChildCount(activity));
+            // a programmatic pop lands while the gesture is in flight: the
+            // navigator must auto-cancel the gesture and complete the pop
+            assertTrue(nav.pop());
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+        });
+        await("auto-cancelled gesture left a single attached child", () -> {
+            AtomicBoolean ok = new AtomicBoolean(false);
+            mScenario.onActivity(activity ->
+                    ok.set(attachedChildCountSync(activity) == 1));
+            return ok.get();
+        });
+        mScenario.onActivity(activity -> {
+            // the navigator must stay fully usable: a following push/pop
+            // round-trip proves no leaked child poisons the view stack
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            assertTrue(isSecondDisplayed(activity));
+            assertTrue(nav.pop());
+            assertTrue(isHomeDisplayed(activity));
+        });
+    }
+
+    @Test
+    public void predictiveBack_pushIssuedDuringGesture_autoCancels_noLeakedChild()
+            throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            nav.onBackStarted(gestureStartEvent());
+            assertEquals(2, attachedChildCount(activity));
+            // a push lands while the gesture is in flight: auto-cancel then
+            // complete the push (ThirdPage is an anonymous route)
+            nav.push((args, activity1) -> new ThirdPage(), null, null, null);
+            // NOTE: the display check must NOT run here - children are
+            // [home, third] until the deferred restore end action removes home
+        });
+        await("auto-cancelled gesture left a single attached child after push", () -> {
+            AtomicBoolean ok = new AtomicBoolean(false);
+            mScenario.onActivity(activity ->
+                    ok.set(attachedChildCountSync(activity) == 1));
+            return ok.get();
+        });
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            assertTrue("ThirdPage must be displayed after the push landed and"
+                    + " the restore animation completed", isThirdDisplayed(activity));
+            // pop twice back to home proves the stacks stayed consistent
+            assertTrue(nav.pop());
+            assertTrue(nav.pop());
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+        });
+    }
+
+    @Test
+    public void predictiveBack_progressedWithoutStarted_normalizes_andCommitPopsOnce()
+            throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            nav.push((args, activity1) -> new SecondPage(), null, null, null);
+            assertTrue(isSecondDisplayed(activity));
+            // progressed delivered WITHOUT a preceding started: the navigator
+            // must normalize it into a start (speculative pop), no crash
+            nav.onBackProgressed(gestureProgressEvent(0.5f));
+            assertEquals("normalized start must attach the previous page view"
+                            + " beneath the current one",
+                    2, attachedChildCount(activity));
+            // route intact: [HOME, SECOND#1, SECOND#2(anonymous top)] -
+            // the top route is the anonymous one, assert by stack position
+            assertEquals(2, nav.findRouteIndex(nav.getCurrentRoute()));
+            assertFalse(nav.isInitialRoute());
+            // commit pops exactly once: top page gone, the NAMED second page
+            // below it is the new current route
+            nav.onBackPressed();
+            assertEquals(Routes.SECOND_PAGE, nav.getCurrentRoute().getRouteName());
+            assertFalse(nav.isInitialRoute());
+            View currentView = navLayout(activity).getCurrentView();
+            assertTrue("the page below the popped one must be the current view",
+                    currentView != null
+                            && currentView.findViewById(R.id.button_plus) != null);
+        });
+        // the commit animation detaches the popped view asynchronously, the
+        // single-child invariant leaves only the new current page attached
+        await("commit animation settled to the single remaining child", () -> {
+            AtomicBoolean ok = new AtomicBoolean(false);
+            mScenario.onActivity(activity ->
+                    ok.set(attachedChildCountSync(activity) == 1));
+            return ok.get();
+        });
+        mScenario.onActivity(activity -> {
+            // navigator must stay fully usable
+            INavigator nav = navigator(activity);
+            assertTrue(nav.pop());
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+        });
+    }
+
+    @Test
+    public void predictiveBack_replaceIssuedDuringGesture_autoCancels_noLeakedChild()
+            throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            nav.onBackStarted(gestureStartEvent());
+            assertEquals(2, attachedChildCount(activity));
+            // a replace lands while the gesture is in flight: the navigator
+            // must auto-cancel the gesture and complete the replace
+            nav.replace(Routes.SECOND_PAGE, null, null, null);
+            assertEquals(Routes.SECOND_PAGE, nav.getCurrentRoute().getRouteName());
+            assertFalse(nav.isInitialRoute());
+        });
+        await("replace during gesture left a single attached child", () -> {
+            AtomicBoolean ok = new AtomicBoolean(false);
+            mScenario.onActivity(activity ->
+                    ok.set(attachedChildCountSync(activity) == 1));
+            return ok.get();
+        });
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            // the replaced route must be displayed once the restore settled
+            assertTrue("replaced route must be displayed after the gesture"
+                    + " auto-cancel settled", isSecondDisplayed(activity));
+            // navigator must stay fully usable
+            assertTrue(nav.pop());
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+        });
+    }
+
+    @Test
+    public void predictiveBack_secondPopInsideCommitWindow_popCallbackReceivesCorrectView()
+            throws Exception {
+        launchAndResetToHome();
+        final AtomicReference<View> firstPopViewRef = new AtomicReference<>();
+        final AtomicReference<View> secondPopViewRef = new AtomicReference<>();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            // stack: [HOME, SECOND#1, SECOND#2]; SECOND#2 on top carries the
+            // first callback (popped by the commit), SECOND#1 the second one
+            // (popped inside the commit window)
+            nav.push(Routes.SECOND_PAGE, null, (navigator, navRoute, activity1, currentView) ->
+                    firstPopViewRef.set(currentView));
+            nav.push((args, activity1) -> new SecondPage(), null,
+                    (navigator, navRoute, activity1, currentView) ->
+                            secondPopViewRef.set(currentView));
+            assertTrue(isSecondDisplayed(activity));
+            // gesture on the top page, then commit
+            nav.onBackStarted(gestureStartEvent());
+            assertEquals(2, attachedChildCount(activity));
+            nav.onBackPressed();
+            assertEquals(Routes.SECOND_PAGE, nav.getCurrentRoute().getRouteName());
+            assertFalse(nav.isInitialRoute());
+            // second pop issued synchronously inside the ~200ms commit window:
+            // the popped page's NavPopCallback must receive the TRUE current
+            // view (the page being popped), NOT the animating-out view of the
+            // commit - this is the regression the stack-filtered
+            // NavViewLayout.getCurrentView() protects
+            assertTrue(nav.pop());
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+        });
+        await("double pop settled to a single attached child", () -> {
+            AtomicBoolean ok = new AtomicBoolean(false);
+            mScenario.onActivity(activity ->
+                    ok.set(attachedChildCountSync(activity) == 1));
+            return ok.get();
+        });
+        mScenario.onActivity(activity -> {
+            assertTrue(isHomeDisplayed(activity));
+            assertNotNull("commit pop callback must receive a view",
+                    firstPopViewRef.get());
+            assertNotNull("second pop callback must receive a view",
+                    secondPopViewRef.get());
+            assertNotSame("second pop inside the commit window must receive the"
+                            + " true current view, not the animating-out view of the commit",
+                    firstPopViewRef.get(), secondPopViewRef.get());
+        });
+    }
+
+    private static boolean isThirdDisplayed(RawActivity activity) {
+        View view = displayedView(activity);
+        return view != null && view.findViewById(R.id.textview_third) != null;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 9. Saved-state restore announces the restored stack to route listeners
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    public void restore_announcesRouteChangedWithNullPrevious_andBackStateSyncs()
+            throws Exception {
+        launchAndResetToHome();
+        final List<NavRoute[]> events = new ArrayList<>();
+        // listener and its registration survive recreate() through the
+        // application-scoped navigator, exactly like the example activity's
+        // dispatcher-callback sync listener
+        final NavOnRouteChangedListener listener = (previous, current) ->
+                events.add(new NavRoute[]{previous, current});
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.addOnRouteChangedListener(listener);
+            // multi-page stack so the restored state has something to announce
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            assertTrue(isSecondDisplayed(activity));
+        });
+        // only the RESTORE announcement matters, drop the push event
+        mScenario.onActivity(activity -> events.clear());
+        // same restore mechanics as replace_oldRoutePurgedFromSavedState_..
+        // : recreate() re-runs onActivityCreated -> initNavigatorState, which
+        // replaces the route stack wholesale from the saved snapshot
+        mScenario.recreate();
+        await("restored [HOME, SECOND] stack after recreate", () -> {
+            AtomicBoolean ok = new AtomicBoolean(false);
+            mScenario.onActivity(activity -> {
+                INavigator nav = navigator(activity);
+                ok.set(nav.getCurrentRoute() != null
+                        && Routes.SECOND_PAGE.equals(nav.getCurrentRoute().getRouteName())
+                        && !nav.isInitialRoute()
+                        && isSecondDisplayed(activity));
+            });
+            return ok.get();
+        });
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            // (a) exactly ONE announcement, previous == null, current = the
+            // restored top route (second element of the recorded pair)
+            assertEquals("restore must fire exactly one route-changed event",
+                    1, events.size());
+            assertNull("restore event previous must be null", events.get(0)[0]);
+            assertNotNull("restore event current must be the restored top route",
+                    events.get(0)[1]);
+            assertEquals(Routes.SECOND_PAGE, events.get(0)[1].getRouteName());
+            // (b) the dispatcher-callback sync predicate reflects the
+            // restored stack: [HOME, SECOND], SECOND has no custom back
+            // handling, stack size > 1 -> must intercept
+            assertTrue("restored [HOME, SECOND] stack must intercept back",
+                    nav.shouldInterceptBack());
+        });
+        // listener MUST be removed: the app-level navigator outlives the test
+        mScenario.onActivity(activity ->
+                navigator(activity).removeOnRouteChangedListener(listener));
     }
 }
 

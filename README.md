@@ -170,6 +170,74 @@ public class MainActivity extends Activity {
     }
 }
 ```
+
+### Predictive back gesture support (optional)
+
+The navigator ships predictive back plumbing with zero new dependencies:
+while a back gesture is in progress, the current page shrinks/slides away
+revealing the previous page underneath, and the route is only popped when the
+gesture commits. Everything stays backward compatible: legacy
+`onBackPressed()`/`pop()` callers behave exactly as before (3-button
+navigation, programmatic pops).
+
+To enable it in a host app (androidx.activity >= 1.8 required on the APP side
+only, see `AppCompatExampleActivity` for a complete example):
+
+1. Opt in to the system predictive back in the manifest:
+   `android:enableOnBackInvokedCallback="true"` (API 33+).
+2. Register ONE `OnBackPressedCallback` per activity, keep its enabled state in
+   sync with `navigator.shouldInterceptBack()` (re-check on every route change
+   via `addOnRouteChangedListener`) so the system can show its default
+   back-to-home animation when the navigator cannot consume back.
+3. Forward the gesture frames by overriding
+   `handleOnBackStarted/handleOnBackProgressed/handleOnBackCancelled`
+   (`OnBackPressedCallback`, activity 1.8+) and translate the androidx
+   `BackEventCompat` into the library-owned
+   `m.co.rh.id.anavigator.component.NavBackEvent`.
+4. Signal the commit through the existing legacy path:
+   `handleOnBackPressed() -> navigator.onBackPressed()`.
+
+```
+getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+    @Override
+    public void handleOnBackPressed() {
+        // gesture commit (or legacy button press)
+        MyApplication.of(MainActivity.this)
+                .getNavigator(MainActivity.this).onBackPressed();
+    }
+
+    @Override
+    public void handleOnBackStarted(@NonNull BackEventCompat backEvent) {
+        MyApplication.of(MainActivity.this)
+                .getNavigator(MainActivity.this)
+                .onBackStarted(new NavBackEvent(backEvent.getTouchX(),
+                        backEvent.getTouchY(), backEvent.getProgress()));
+    }
+
+    @Override
+    public void handleOnBackProgressed(@NonNull BackEventCompat backEvent) {
+        MyApplication.of(MainActivity.this)
+                .getNavigator(MainActivity.this)
+                .onBackProgressed(new NavBackEvent(backEvent.getTouchX(),
+                        backEvent.getTouchY(), backEvent.getProgress()));
+    }
+
+    @Override
+    public void handleOnBackCancelled() {
+        MyApplication.of(MainActivity.this)
+                .getNavigator(MainActivity.this).onBackCancelled();
+    }
+});
+// keep this in sync with navigator.shouldInterceptBack() on route changes
+```
+
+Hosts that always want the navigator to consume back may instead register an
+always-enabled callback and skip the enable-sync entirely; the trade-off is
+that the system's back-to-home animation is suppressed at the root.
+Note that `onRouteChanged` also fires exactly once after a saved-state restore
+(process death / activity recreation) with `previous == null`, so the
+enable-sync above covers process restores without any extra lifecycle hooks.
+
 This framework also support injection by annotating fields with `@NavInject`
 ```
 public class HomePage extends StatefulView<Activity> {

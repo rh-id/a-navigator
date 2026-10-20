@@ -15,6 +15,7 @@ import android.util.ArrayMap;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewPropertyAnimator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
@@ -54,6 +55,7 @@ import m.co.rh.id.anavigator.annotation.NavViewNavigator;
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavActivity;
 import m.co.rh.id.anavigator.component.NavActivityLifecycle;
+import m.co.rh.id.anavigator.component.NavBackEvent;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
@@ -88,6 +90,15 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     private LinkedList<NavRoute> mNavRouteStack;
     private final int mViewAnimatorId;
     private boolean mIsNavigating;
+    /**
+     * True between {@link #onBackStarted(NavBackEvent)} and the gesture
+     * outcome (commit through {@link #onBackPressed()} or
+     * {@link #onBackCancelled()}). While active, the gesture-driven pop
+     * animation may run inside {@link NavViewLayout} (its state is tracked
+     * separately there) and the next {@link #onBackPressed()} invocation is
+     * interpreted as the gesture commit.
+     */
+    private boolean mPredictiveBackActive;
     private final LinkedList<Runnable> mPendingNavigatorRoute;
     private final SnapshotHandler mNavSnapshotHandler;
     private final List<ViewNavigator> mViewNavigatorList;
@@ -146,6 +157,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mPendingNavigatorRoute.add(() -> push(statefulViewFactory, args, navPopCallback));
             return;
         }
+        // a queued execution of this method (see above) re-enters here once the
+        // running navigation released mIsNavigating, hence cancelling here also
+        // covers the queued-later case
+        cancelOngoingPredictiveBack();
         mIsNavigating = true;
         push(statefulViewFactory, null, args, navPopCallback, routeOptions);
     }
@@ -158,6 +173,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mPendingNavigatorRoute.add(() -> push(routeName, args, navPopCallback));
             return;
         }
+        // a queued execution of this method (see above) re-enters here once the
+        // running navigation released mIsNavigating, hence cancelling here also
+        // covers the queued-later case
+        cancelOngoingPredictiveBack();
         mIsNavigating = true;
         StatefulViewFactory<ACT, SV> statefulViewFactory = mNavConfiguration.getNavMap().get(routeName);
         if (statefulViewFactory == null) {
@@ -260,11 +279,33 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     private boolean popInternal(Serializable result, boolean triggerCheckAndShowDialog, boolean exitWhenStackEmpty) {
+        return popInternal(result, triggerCheckAndShowDialog, exitWhenStackEmpty, false);
+    }
+
+    /**
+     * Same as {@link #popInternal(Serializable, boolean, boolean)} with
+     * control over the standard pop view transition.
+     *
+     * @param suppressPopTransition when true, the standard
+     *                              {@link NavViewLayout#showPrevious()} swap is
+     *                              replaced by
+     *                              {@link NavViewLayout#finishPredictiveBack()}
+     *                              which plays the predictive back gesture
+     *                              commit animation instead (the previous page
+     *                              is already attached beneath the animating
+     *                              current page). Only used by the predictive
+     *                              back gesture commit path
+     */
+    private boolean popInternal(Serializable result, boolean triggerCheckAndShowDialog, boolean exitWhenStackEmpty, boolean suppressPopTransition) {
         if (mIsNavigating) {
             // if this pop is invoke during initState or buildView or dispose, add to pending
             mPendingNavigatorRoute.add(() -> pop(result));
             return false;
         }
+        // NOTE: the predictive back commit path clears mPredictiveBackActive
+        // BEFORE calling this method with suppressPopTransition=true, so this
+        // cancellation never fights the commit it is about to perform.
+        cancelOngoingPredictiveBack();
         mIsNavigating = true;
         if (mNavRouteStack.size() > 1) {
             NavRoute currentRoute = mNavRouteStack.peek();
@@ -275,7 +316,11 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 NavViewLayout existingViewAnimator = getViewAnimator();
                 // check for route options
                 View currentView = existingViewAnimator.getCurrentView();
-                existingViewAnimator.showPrevious();
+                if (suppressPopTransition) {
+                    existingViewAnimator.finishPredictiveBack();
+                } else {
+                    existingViewAnimator.showPrevious();
+                }
                 // Try reset view navigator before pop
                 resetViewNavigator(currentView);
                 // cont pop
@@ -605,6 +650,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
     }
 
     void dispose() {
+        // cancel any in-flight predictive back gesture first: dispose pops
+        // every route, the gesture animation must not outlive the views it
+        // borrows
+        cancelOngoingPredictiveBack();
         // dispose view navigator first
         if (!mViewNavigatorList.isEmpty()) {
             for (ViewNavigator viewNavigator : mViewNavigatorList) {
@@ -698,6 +747,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mPendingNavigatorRoute.add(() -> replace(routeName, args, navPopCallback, routeOptions));
             return;
         }
+        cancelOngoingPredictiveBack();
         if (mNavRouteStack.isEmpty()) {
             // nothing to replace, fallback to push
             push(routeName, args, navPopCallback, routeOptions);
@@ -788,6 +838,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         if (mNavRouteStack.isEmpty()) {
             return;
         }
+        cancelOngoingPredictiveBack();
         mIsNavigating = true;
         NavRoute currentNavRoute = mNavRouteStack.peek();
         StatefulView statefulView = currentNavRoute.getStatefulView();
@@ -856,6 +907,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mPendingNavigatorRoute.add(() -> reBuildRoute(routeIndex));
             return;
         }
+        cancelOngoingPredictiveBack();
         mIsNavigating = true;
         int lastIndex = mNavRouteStack.size() - 1;
         NavRoute navRoute = mNavRouteStack.get(lastIndex - routeIndex);
@@ -923,6 +975,7 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             mPendingNavigatorRoute.add(this::reBuildAllRoute);
             return;
         }
+        cancelOngoingPredictiveBack();
         mIsNavigating = true;
         NavViewLayout newViewAnimator = createViewAnimator(mActivity, mViewAnimatorId, mNavConfiguration);
         for (int i = mNavRouteStack.size() - 1; i >= 0; i--) {
@@ -1036,6 +1089,30 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
 
     @Override
     public void onBackPressed() {
+        if (mPredictiveBackActive) {
+            // this invocation is the COMMIT of a predictive back gesture,
+            // consume the flag first so any re-entrant navigation triggered by
+            // the pop below treats the gesture as already finished
+            mPredictiveBackActive = false;
+            NavViewLayout viewAnimator = getViewAnimator();
+            if (viewAnimator != null && viewAnimator.isPredictiveBackActive()) {
+                // Speculative-pop case: the gesture animation is running in the
+                // layout, run the pop bookkeeping with the standard pop
+                // transition suppressed, finishPredictiveBack() plays the
+                // gesture-driven commit animation instead (the current page
+                // continues sliding away revealing the previous page that is
+                // already attached beneath).
+                popInternal(null, true, true, true);
+                return;
+            }
+            // Interceptor case: the top route implements NavOnBackPressed, its
+            // back behavior is unknown (it may pop, it may not), so no gesture
+            // animation was ever started. Deliberate correctness-over-coverage
+            // decision: it would be wrong to animate a pop that may not
+            // happen. Fall through to the legacy handling below which forwards
+            // the back press to the page; since nothing was animated, there is
+            // nothing to cancel either.
+        }
         if (!mNavRouteStack.isEmpty()) {
             StatefulView statefulView = mNavRouteStack.peek().getStatefulView();
             if (statefulView instanceof NavOnBackPressed) {
@@ -1047,6 +1124,121 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         }
         // if back button is not handled, then pop as usual
         pop();
+    }
+
+    /**
+     * Decides whether the NEXT back event will be consumed by this navigator.
+     * Host apps use it to enable/disable their back dispatcher callback so the
+     * system can show its default back-to-home animation when this returns
+     * false.
+     * <p>
+     * The rules are:
+     * <ul>
+     *     <li>empty route stack (e.g. during the async snapshot-restore
+     *     window) -> false, the system default (activity exit) applies</li>
+     *     <li>top route is a StatefulViewDialog -> false, the dialog owns its
+     *     window and consumes back itself</li>
+     *     <li>stack size more than 1 -> true, the navigator can pop</li>
+     *     <li>stack size == 1 -> true only if the top StatefulView implements
+     *     NavOnBackPressed (e.g. a home page that closes a drawer on back),
+     *     otherwise false because back would exit the activity anyway</li>
+     * </ul>
+     */
+    @Override
+    public boolean shouldInterceptBack() {
+        if (mNavRouteStack.isEmpty()) {
+            return false;
+        }
+        StatefulView currentStatefulView = mNavRouteStack.peek().getStatefulView();
+        if (currentStatefulView instanceof StatefulViewDialog) {
+            return false;
+        }
+        if (mNavRouteStack.size() > 1) {
+            return true;
+        }
+        return currentStatefulView instanceof NavOnBackPressed;
+    }
+
+    @Override
+    public void onBackStarted(NavBackEvent backEvent) {
+        if (backEvent == null || mIsNavigating || !shouldInterceptBack()) {
+            // defensive no-op: no gesture can be meaningfully tracked while a
+            // navigation is running, when the stack is empty/being restored or
+            // when back would not be consumed by this navigator anyway
+            return;
+        }
+        StatefulView currentStatefulView = mNavRouteStack.peek().getStatefulView();
+        int stackSize = mNavRouteStack.size();
+        if (stackSize > 1 && !(currentStatefulView instanceof NavOnBackPressed)) {
+            // Speculative pop: the top route has no custom back handling, so
+            // back WILL pop it. Start the gesture-driven pop animation that
+            // reveals the previous page underneath. The route itself is only
+            // popped when the gesture commits via onBackPressed().
+            NavViewLayout viewAnimator = getViewAnimator();
+            if (viewAnimator != null && viewAnimator.startPredictiveBack(backEvent)) {
+                mPredictiveBackActive = true;
+            }
+        } else if (stackSize > 1) {
+            // The top route implements NavOnBackPressed: its back behavior is
+            // unknown (pop, drawer close, ...). No animation is started on
+            // purpose, correctness over coverage: it would be wrong to animate
+            // a pop that may not happen. The flag is still set so that the
+            // commit is routed through the gesture-aware onBackPressed() path,
+            // which simply falls back to the legacy handling.
+            mPredictiveBackActive = true;
+        }
+        // stackSize == 1 (e.g. a home page with drawer/double-back handling):
+        // no animation and no flag, the commit simply goes through the legacy
+        // onBackPressed() path
+    }
+
+    @Override
+    public void onBackProgressed(NavBackEvent backEvent) {
+        if (backEvent == null) {
+            return;
+        }
+        if (!mPredictiveBackActive) {
+            // defensive normalization: some hosts may deliver progressed
+            // without a preceding started event (missed callback), behave like
+            // onBackStarted first
+            onBackStarted(backEvent);
+        }
+        if (mPredictiveBackActive) {
+            NavViewLayout viewAnimator = getViewAnimator();
+            if (viewAnimator != null && viewAnimator.isPredictiveBackActive()) {
+                viewAnimator.updatePredictiveBack(backEvent.getProgress());
+            }
+            // when no animation is running (interceptor case) there is nothing
+            // to update
+        }
+    }
+
+    @Override
+    public void onBackCancelled() {
+        if (mPredictiveBackActive) {
+            mPredictiveBackActive = false;
+            NavViewLayout viewAnimator = getViewAnimator();
+            if (viewAnimator != null) {
+                viewAnimator.cancelPredictiveBack();
+            }
+        }
+    }
+
+    /**
+     * Cancels any in-flight predictive back gesture. Invoked at the entry of
+     * every mutating navigation method (push, popInternal, replace, retry,
+     * reBuildRoute, reBuildAllRoute) and dispose(), so the layout never
+     * enters a navigation while the two-children-during-gesture window is
+     * open. Cheap no-op when no gesture is active.
+     */
+    private void cancelOngoingPredictiveBack() {
+        if (mPredictiveBackActive) {
+            mPredictiveBackActive = false;
+            NavViewLayout viewAnimator = getViewAnimator();
+            if (viewAnimator != null) {
+                viewAnimator.cancelPredictiveBack();
+            }
+        }
     }
 
     @Override
@@ -1180,6 +1372,22 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                     if (!mPendingNavigatorRoute.isEmpty()) {
                         mPendingNavigatorRoute.pop().run();
                     }
+                    // Announce the restore to route-changed listeners. This
+                    // block only runs when a snapshot was actually restored
+                    // (a first launch goes through the else-branch push above,
+                    // which fires the event through normal navigation), so
+                    // there is no double fire. It is deliberately the LAST
+                    // statement: listeners observe fully-consistent state
+                    // (views built, displayed, dialogs shown, orientation
+                    // applied) and may navigate safely from here - any
+                    // navigation they trigger queues/drains through the
+                    // normal pending-route mechanism. Without this event,
+                    // hosts syncing their back dispatcher callback enabled
+                    // state via addOnRouteChangedListener go stale after
+                    // process death (the callback was synced against the
+                    // empty stack during onCreate, before this async restore
+                    // replaced it).
+                    onRouteChanged(null, mNavRouteStack.peek());
                 } else {
                     push(mNavConfiguration.getInitialRouteName());
                 }
@@ -1653,6 +1861,22 @@ class NavViewLayout extends FrameLayout {
     private Map<Integer, Animation> mAnimationCache;
     private Map<Integer, Transition> mTransitionCache;
 
+    // -----------------------------------------------------------------------------------------
+    // Predictive back gesture state.
+    // During the gesture the view of the route BELOW the current one is attached
+    // at index 0 (bottom Z order) while the current view stays topmost (it is
+    // the last child) and is transformed following the gesture progress. The
+    // historical single-child invariant is restored by
+    // cancelPredictiveBack()/finishPredictiveBack().
+    // -----------------------------------------------------------------------------------------
+    /**
+     * -1 when the gesture started on the left half of the screen, +1 on the
+     * right half: the current page slides toward the gesture edge.
+     */
+    private float mPredictiveBackDirection;
+    private View mPredictiveBackPreviousView;
+    private boolean mPredictiveBackActive;
+
     public NavViewLayout(Context context, Navigator navigator) {
         super(context);
         mNavigator = navigator;
@@ -1714,6 +1938,7 @@ class NavViewLayout extends FrameLayout {
     }
 
     public void displayLast() {
+        sweepDetachedViews();
         removeAllViews();
         // guard: an empty view stack (e.g. a route stack consisting of dialogs
         // only) has nothing to display, this used to throw NoSuchElement
@@ -1731,6 +1956,10 @@ class NavViewLayout extends FrameLayout {
     }
 
     public void animateTo(int index) {
+        // self-heal for the interrupted predictive back commit: the animating
+        // out view is no longer part of the view stack, remove it before any
+        // index arithmetic or child swap happens
+        sweepDetachedViews();
         if (index < 0 || index >= mViewStack.size()) {
             // defensive clamp: never crash on IndexOutOfBoundsException and
             // shield getCurrentRoute() from NPE on an empty route stack below
@@ -1792,12 +2021,40 @@ class NavViewLayout extends FrameLayout {
             if (mInAnimation != null) {
                 destView.startAnimation(mInAnimation);
             }
+            if (destView.getParent() == this) {
+                // can happen when a predictive back cancel ran in the same
+                // frame: the revealed view is still attached (its removal is
+                // deferred to the cancel animation end action), detach it so
+                // the swap below stays valid and it ends up on top
+                removeView(destView);
+            }
             addView(destView);
         }
     }
 
+    /**
+     * @return the topmost attached child that is still part of the view stack.
+     * With the historical single-child invariant this is the only attached
+     * child and equals the old {@code getChildAt(0)}. During a predictive back
+     * gesture (previous attached at index 0, current on top at the last index)
+     * it returns the true current view, and during the brief predictive back
+     * commit animation window it skips the animating-out view which is already
+     * removed from the view stack but still attached to play its exit
+     * animation. Falls back to the plain topmost child when no attached child
+     * is part of the view stack (e.g. the loading view shown before the first
+     * route is restored), preserving the legacy behavior in that case.
+     */
     public View getCurrentView() {
-        return getChildAt(0);
+        for (int i = getChildCount() - 1; i >= 0; i--) {
+            View child = getChildAt(i);
+            if (mViewStack.contains(child)) {
+                return child;
+            }
+        }
+        if (getChildCount() == 0) {
+            return null;
+        }
+        return getChildAt(getChildCount() - 1);
     }
 
     public View getChildFromStack(int index) {
@@ -1877,5 +2134,281 @@ class NavViewLayout extends FrameLayout {
         setInAnimation(inAnimation);
         setOutAnimation(outAnimation);
         animateTo(getCurrentViewIndex() + 1);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Predictive back gesture mechanics.
+    // All view APIs used here are available since API 11 (setTranslationX,
+    // setScaleX/Y, setAlpha); ViewPropertyAnimator (View.animate()) itself is
+    // available since API 12, but withEndAction - used here for the deferred
+    // child removals - requires API 16, hence the JELLY_BEAN guard that falls
+    // back to instant transforms on the minSdk 14/15 devices.
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * @return true while a predictive back gesture animation is in progress,
+     * meaning the previous page view is attached beneath the current one
+     */
+    public boolean isPredictiveBackActive() {
+        return mPredictiveBackActive;
+    }
+
+    /**
+     * Starts the predictive back gesture: attaches the view of the route below
+     * the current one at index 0 (bottom Z order) with an initial 0.95 scale,
+     * the current view stays topmost untouched.
+     *
+     * @param event the gesture start event, its touch point decides the slide
+     *              direction (toward the gesture edge)
+     * @return true if the gesture animation was started, false when there is
+     * no previous view to reveal (nothing to animate)
+     */
+    public boolean startPredictiveBack(NavBackEvent event) {
+        // self-heal: an interrupted earlier gesture (its end action never ran,
+        // e.g. the layout was detached mid-animation) must not leak its extra
+        // child into the new gesture
+        cleanupStalePredictiveBack();
+        View currentView = getCurrentView();
+        int currentIndex = currentView == null ? -1 : mViewStack.indexOf(currentView);
+        if (currentIndex <= 0) {
+            // nothing beneath the current view, nothing to reveal
+            return false;
+        }
+        mPredictiveBackDirection = resolvePredictiveBackDirection(event);
+        mPredictiveBackPreviousView = mViewStack.get(currentIndex - 1);
+        // cancel a stale restore animator still running on the current view
+        // from a previous gesture cancellation: a fast cancel->re-swipe
+        // (under the ~180ms restore duration) would otherwise let the stale
+        // animator fight updatePredictiveBack on every animation frame and
+        // snap the view back to identity when it ends. Canceling a
+        // ViewPropertyAnimator does NOT run its withEndAction, so the
+        // deferred previous-view removal of the old cancel cannot fire here;
+        // on API < 16 there is no ViewPropertyAnimator at all, hence nothing
+        // to cancel. Note: if the stale end action HAD already detached the
+        // previous view, the attach block below re-adds it.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            currentView.animate().cancel();
+        }
+        // attach the previous view at the bottom of the Z order, the current
+        // view (topmost, last child) stays on top of it. It may still be
+        // attached from a cancelled gesture whose restore animation has not
+        // completed yet: in that case reuse it in place (its deferred removal
+        // end action becomes a no-op through the mPredictiveBackActive check)
+        View previousView = mPredictiveBackPreviousView;
+        if (previousView.getParent() == this) {
+            if (indexOfChild(previousView) != 0) {
+                removeView(previousView);
+                addView(previousView, 0);
+            }
+        } else {
+            addView(previousView, 0);
+        }
+        previousView.setScaleX(0.95f);
+        previousView.setScaleY(0.95f);
+        mPredictiveBackActive = true;
+        return true;
+    }
+
+    /**
+     * Updates the ongoing predictive back gesture with a new progress value.
+     * The current view scales down (1.0 -> 0.9) and slides toward the gesture
+     * edge while the previous view scales up (0.95 -> 1.0) proportionally.
+     *
+     * @param progress gesture progress, clamped to 0..1
+     */
+    public void updatePredictiveBack(float progress) {
+        if (!mPredictiveBackActive) {
+            return;
+        }
+        float clamped = Math.max(0f, Math.min(1f, progress));
+        View currentView = getCurrentView();
+        if (currentView != null && currentView != mPredictiveBackPreviousView) {
+            currentView.setScaleX(1f - 0.1f * clamped);
+            currentView.setScaleY(1f - 0.1f * clamped);
+            currentView.setTranslationX(mPredictiveBackDirection * 0.15f * getWidth() * clamped);
+        }
+        if (mPredictiveBackPreviousView != null) {
+            float scale = 0.95f + 0.05f * clamped;
+            mPredictiveBackPreviousView.setScaleX(scale);
+            mPredictiveBackPreviousView.setScaleY(scale);
+        }
+    }
+
+    /**
+     * Cancels the ongoing predictive back gesture: animates the current view
+     * back to its identity transform and removes the previous view again once
+     * the animation ends, restoring the single-child invariant. No-op when no
+     * gesture is active.
+     */
+    public void cancelPredictiveBack() {
+        if (!mPredictiveBackActive) {
+            return;
+        }
+        mPredictiveBackActive = false;
+        View previousView = mPredictiveBackPreviousView;
+        View currentView = getCurrentView();
+        mPredictiveBackPreviousView = null;
+        if (currentView == null || previousView == null || currentView == previousView) {
+            // inconsistent/already-repaired state, restore the transforms
+            // defensively and drop the extra child if it is still attached
+            resetPredictiveBackTransforms(currentView);
+            resetPredictiveBackTransforms(previousView);
+            if (previousView != null && previousView.getParent() == this) {
+                removeView(previousView);
+            }
+            return;
+        }
+        // animate the current view back to identity, then detach the previous
+        // view. The end action is defensive: it removes only the captured
+        // previous view, and only while no NEW gesture re-anchored it
+        // (mPredictiveBackActive) and while it did not become the legitimately
+        // displayed view (a navigation may have swapped to it in the same
+        // frame as this cancellation)
+        runPredictiveBackAnimation(currentView, 180L, 0f, 1f, 1f, 1f, false, () -> {
+            if (!mPredictiveBackActive
+                    && previousView.getParent() == this
+                    && previousView != getCurrentView()) {
+                previousView.setScaleX(1f);
+                previousView.setScaleY(1f);
+                removeView(previousView);
+            }
+        });
+    }
+
+    /**
+     * Finishes the predictive back gesture as a COMMIT: plays the pop
+     * animation where the current page continues sliding away (translate,
+     * shrink, fade) revealing the previous page that is already attached
+     * beneath it, then detaches the animating-out view. The route bookkeeping
+     * runs synchronously in the navigator in parallel; the end action only
+     * removes the captured animating-out view so a navigation issued during
+     * the ~200ms animation window cannot break the hierarchy (stale children
+     * are additionally swept by {@link #sweepDetachedViews()}). No-op when no
+     * gesture is active.
+     */
+    public void finishPredictiveBack() {
+        if (!mPredictiveBackActive) {
+            return;
+        }
+        mPredictiveBackActive = false;
+        View previousView = mPredictiveBackPreviousView;
+        View currentView = getCurrentView();
+        mPredictiveBackPreviousView = null;
+        float direction = mPredictiveBackDirection;
+        if (currentView == null || previousView == null || currentView == previousView) {
+            // inconsistent/already-repaired state, restore transforms
+            // defensively, the caller's bookkeeping takes care of the rest
+            resetPredictiveBackTransforms(currentView);
+            resetPredictiveBackTransforms(previousView);
+            if (previousView != null && previousView.getParent() == this && previousView != currentView) {
+                removeView(previousView);
+            }
+            return;
+        }
+        float width = getWidth();
+        // bring the revealed page to full scale while the current page slides
+        // out toward the gesture edge, shrinks and fades away
+        runPredictiveBackAnimation(previousView, 200L, 0f, 1f, 1f, 1f, false, null);
+        runPredictiveBackAnimation(currentView, 200L,
+                direction * 0.5f * width, 0.85f, 0.85f, 0f, true, () -> {
+                    // remove only the captured view: the route bookkeeping
+                    // already ran, so the layout may have been navigated again
+                    // in the meantime and this view may even have been swept
+                    if (currentView.getParent() == this) {
+                        removeView(currentView);
+                    }
+                    currentView.setAlpha(1f);
+                });
+    }
+
+    /**
+     * Removes any attached child that is NOT part of the view stack.
+     * Self-heal for the predictive back commit window: the animating-out view
+     * stays attached for its ~200ms exit animation after the route was already
+     * popped (and removed from the view stack), so a navigation landing inside
+     * that window must be able to get rid of it deterministically instead of
+     * waiting for the animation end action.
+     */
+    public void sweepDetachedViews() {
+        int childCount = getChildCount();
+        if (childCount > 1) {
+            // iterate backwards, removeView shifts the indices
+            for (int i = childCount - 1; i >= 0; i--) {
+                View child = getChildAt(i);
+                if (!mViewStack.contains(child)) {
+                    removeView(child);
+                }
+            }
+        }
+    }
+
+    private float resolvePredictiveBackDirection(NavBackEvent event) {
+        // slide toward the screen edge the gesture started from
+        return event.getTouchX() < getWidth() / 2f ? -1f : 1f;
+    }
+
+    /**
+     * Repairs leftover gesture state from an interrupted gesture whose end
+     * action never ran (e.g. the layout was detached mid-animation): resets
+     * the previous view transforms and detaches it.
+     */
+    private void cleanupStalePredictiveBack() {
+        if (mPredictiveBackPreviousView != null) {
+            View previousView = mPredictiveBackPreviousView;
+            previousView.setScaleX(1f);
+            previousView.setScaleY(1f);
+            if (previousView.getParent() == this) {
+                removeView(previousView);
+            }
+            mPredictiveBackPreviousView = null;
+        }
+        mPredictiveBackActive = false;
+    }
+
+    private void resetPredictiveBackTransforms(View view) {
+        if (view != null) {
+            view.setTranslationX(0f);
+            view.setScaleX(1f);
+            view.setScaleY(1f);
+            view.setAlpha(1f);
+        }
+    }
+
+    /**
+     * Animates a single view to the given target transform values.
+     * Uses ViewPropertyAnimator on API 16+; below that it falls back to
+     * applying the target values instantly and running the end action
+     * immediately (the gesture still works, just without the tween).
+     *
+     * @param applyAlpha false to leave the view alpha untouched
+     */
+    private void runPredictiveBackAnimation(View view, long durationMs,
+                                            float targetTranslationX,
+                                            float targetScaleX, float targetScaleY,
+                                            float targetAlpha, boolean applyAlpha,
+                                            Runnable endAction) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            ViewPropertyAnimator animator = view.animate()
+                    .translationX(targetTranslationX)
+                    .scaleX(targetScaleX)
+                    .scaleY(targetScaleY)
+                    .setDuration(durationMs);
+            if (applyAlpha) {
+                animator.alpha(targetAlpha);
+            }
+            if (endAction != null) {
+                animator.withEndAction(endAction);
+            }
+        } else {
+            view.setTranslationX(targetTranslationX);
+            view.setScaleX(targetScaleX);
+            view.setScaleY(targetScaleY);
+            if (applyAlpha) {
+                view.setAlpha(targetAlpha);
+            }
+            if (endAction != null) {
+                endAction.run();
+            }
+        }
     }
 }

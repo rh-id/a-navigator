@@ -4,7 +4,11 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    // 34 (not 37): AGP 8.2.0's SDK loader only reads package.xml schema v3 and
+    // cannot load the versioned android-37.0 platform (schema v4, new dir
+    // naming), so compileSdk 37 hard-fails with "Failed to find Platform SDK".
+    // 34 is AGP 8.2's max tested compileSdk; revisit after an AGP upgrade.
+    compileSdk 34
 
     defaultConfig {
         minSdkVersion 14

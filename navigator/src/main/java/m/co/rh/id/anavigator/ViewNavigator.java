@@ -6,6 +6,22 @@ import android.view.ViewGroup;
 
 import java.io.Serializable;
 
+/**
+ * A navigator that lives inside a ViewGroup of a host page (nested navigator),
+ * it has its own route stack and its own {@link NavViewLayout}.
+ * <p>
+ * Predictive back: this class inherits the full predictive back gesture
+ * support ({@link #shouldInterceptBack()}, {@link #onBackStarted(NavBackEvent)},
+ * {@link #onBackProgressed(NavBackEvent)}, {@link #onBackCancelled()}) from
+ * {@link Navigator}, and since the route stack and the view animator lookup
+ * ({@link #getViewAnimator()}) are instance scoped, every inherited gesture
+ * rule automatically applies to this navigator's own nested stack. Because
+ * gesture animations only start when the stack size is more than 1, the commit
+ * path can never reach the initial route, therefore the existing behavior of
+ * never finishing any activity at the initial route is preserved (host pages
+ * forward the gesture events to this navigator manually, so this is secondary
+ * but consistent).
+ */
 @SuppressWarnings({"rawtypes"})
 class ViewNavigator<ACT extends Activity, SV extends StatefulView> extends Navigator<ACT, SV> {
     private int mViewGroupContainerId;
