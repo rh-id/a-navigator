@@ -125,6 +125,8 @@ class DateTimePickerSVDialog extends StatefulViewDialog<Activity> implements Req
             int day = mDatePicker.getDayOfMonth();
             Calendar calendar = Calendar.getInstance();
             calendar.set(year, month, day, hourOfDay, minute);
+            calendar.set(Calendar.SECOND, 0);
+            calendar.set(Calendar.MILLISECOND, 0);
             Date date = calendar.getTime();
             getNavigator().pop(Result.newResult(date));
         } else if (id == R.id.button_cancel) {
