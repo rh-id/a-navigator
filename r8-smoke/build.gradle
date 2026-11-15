@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace 'm.co.rh.id.anavigator.r8smoke'
-    compileSdk 33
+    compileSdk = 37
 
     defaultConfig {
         applicationId 'm.co.rh.id.anavigator.r8smoke'

@@ -1,14 +1,11 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
-    // bumped from 33 (EXAMPLE MODULE ONLY) because androidx.activity 1.8.x
-    // (OnBackAnimationCallback, needed by AppCompatExampleActivity for the
-    // predictive back gesture demo) requires compileSdk 34 in its AAR
-    // metadata. The navigator library module itself stays at compileSdk 33.
-    compileSdk 34
+    compileSdk = 37
 
     defaultConfig {
         applicationId "m.co.rh.id.anavigator.example"
@@ -33,16 +30,9 @@ android {
     buildFeatures {
         compose true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion "1.0.4"
-        kotlinCompilerVersion '1.5.31'
-    }
 
     kotlinOptions {
         jvmTarget = "17"
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.4.7"
     }
     namespace 'm.co.rh.id.anavigator.example'
 }

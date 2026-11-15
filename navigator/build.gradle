@@ -4,11 +4,7 @@ plugins {
 }
 
 android {
-    // 34 (not 37): AGP 8.2.0's SDK loader only reads package.xml schema v3 and
-    // cannot load the versioned android-37.0 platform (schema v4, new dir
-    // naming), so compileSdk 37 hard-fails with "Failed to find Platform SDK".
-    // 34 is AGP 8.2's max tested compileSdk; revisit after an AGP upgrade.
-    compileSdk 34
+    compileSdk = 37
 
     defaultConfig {
         minSdkVersion 14
@@ -25,6 +21,11 @@ android {
     }
 
     compileOptions {
+        // NOTE: JitPack's tag builds have no jitpack.yml and rely on
+        // auto-detecting the JDK from these VERSION_17 strings ("Using
+        // JDK 17 (build.gradle)" in the v0.0.74 log). If these are ever
+        // refactored away, pin the JDK again or tags will build on the
+        // wrong JDK and fail AGP's Java-version check.
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
