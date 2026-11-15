@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:minWidth="@dimen/a_navigator_extension_dialog_min_width"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/text_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/a_navigator_extension_dialog_text_margin"
+        android:textSize="@dimen/a_navigator_extension_dialog_text_nav_menu"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/text_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin"
+        android:textSize="@dimen/a_navigator_extension_dialog_text_nav_menu" />
+
+    <!-- no tint attribute on purpose: the bar follows the host app theme,
+         theme-following tinting of framework widgets requires API 21+ while
+         this module supports minSdk 14 -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_marginEnd="@dimen/a_navigator_extension_dialog_text_margin"
+        android:layout_marginBottom="@dimen/a_navigator_extension_dialog_text_margin"
+        android:indeterminate="true" />
+
+</LinearLayout>

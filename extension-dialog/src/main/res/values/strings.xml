@@ -6,6 +6,7 @@
     <string name="a_navigator_extension_dialog_route_date_time_picker">/a-navigator/extension/dialog/dateTimePicker</string>
     <string name="a_navigator_extension_dialog_route_time_picker">/a-navigator/extension/dialog/timePicker</string>
     <string name="a_navigator_extension_dialog_route_date_picker">/a-navigator/extension/dialog/datePicker</string>
+    <string name="a_navigator_extension_dialog_route_progress">/a-navigator/extension/dialog/progress</string>
 
     <!--String used on the dialog UIs-->
     <string name="a_navigator_extension_dialog_ok">@android:string/ok</string>

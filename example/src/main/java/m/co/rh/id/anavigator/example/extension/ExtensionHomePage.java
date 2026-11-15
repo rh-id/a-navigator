@@ -14,11 +14,21 @@ import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.example.MyApplication;
 import m.co.rh.id.anavigator.example.R;
 import m.co.rh.id.anavigator.extension.dialog.ui.NavExtDialogConfig;
+import m.co.rh.id.anavigator.extension.dialog.ui.ProgressSVDialog;
 
 public class ExtensionHomePage extends StatefulView<Activity> {
 
+    private static final long PROGRESS_TICK_MS = 100;
+    private static final int PROGRESS_TICK_MAX = 100;
+
     @NavInject
     private transient INavigator mNavigator;
+    // non-transient on purpose: the typed Args identity must survive process
+    // death via single-graph serialization with the navigator snapshot, so
+    // the page keeps streaming updates to the restored dialog
+    private ProgressSVDialog.Args mProgressDialogArgs;
+    private transient View mProgressTickerView;
+    private transient Runnable mProgressTicker;
 
     @Override
     protected View createView(Activity activity, ViewGroup container) {
@@ -90,6 +100,61 @@ public class ExtensionHomePage extends StatefulView<Activity> {
                                 .show();
                     });
         });
+        Button showProgressDialogButton = view.findViewById(R.id.button_show_progress_dialog);
+        showProgressDialogButton.setOnClickListener(v -> {
+            mProgressDialogArgs = navExtDialogConfig.args_progressDialog("Progress demo", "Working… 0%", 100);
+            mNavigator.push(navExtDialogConfig.route_progressDialog(), mProgressDialogArgs);
+            startProgressTicker(v);
+        });
         return view;
+    }
+
+    @Override
+    public void dispose(Activity activity) {
+        super.dispose(activity);
+        stopProgressTicker();
+        mProgressDialogArgs = null;
+        mNavigator = null;
+    }
+
+    /**
+     * Demo ticker that streams fake progress into the progress dialog Args
+     * every {@link #PROGRESS_TICK_MS} milliseconds and pops the dialog route
+     * once it reaches {@link #PROGRESS_TICK_MAX} (the caller-pops contract).
+     */
+    private void startProgressTicker(View view) {
+        stopProgressTicker();
+        mProgressTickerView = view;
+        mProgressTicker = new Runnable() {
+            private int mProgress;
+
+            @Override
+            public void run() {
+                mProgress++;
+                if (mProgressDialogArgs != null) {
+                    mProgressDialogArgs.updateProgress(mProgress);
+                    mProgressDialogArgs.updateMessage("Working… " + mProgress + "%");
+                }
+                if (mProgress >= PROGRESS_TICK_MAX) {
+                    mProgressTicker = null;
+                    if (mNavigator != null) {
+                        mNavigator.pop();
+                    }
+                    return;
+                }
+                if (mProgressTickerView != null) {
+                    mProgressTickerView.postDelayed(this, PROGRESS_TICK_MS);
+                }
+            }
+        };
+        mProgressTickerView.postDelayed(mProgressTicker, PROGRESS_TICK_MS);
+    }
+
+    private void stopProgressTicker() {
+        if (mProgressTickerView != null && mProgressTicker != null) {
+            mProgressTickerView.removeCallbacks(mProgressTicker);
+        }
+        mProgressTickerView = null;
+        mProgressTicker = null;
     }
 }

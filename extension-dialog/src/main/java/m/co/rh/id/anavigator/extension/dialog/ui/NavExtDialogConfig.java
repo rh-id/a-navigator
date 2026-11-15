@@ -20,6 +20,7 @@ public class NavExtDialogConfig {
     private static final String ROUTE_DATE_TIME_PICKER = "ROUTE_DATE_TIME_PICKER";
     private static final String ROUTE_TIME_PICKER = "ROUTE_TIME_PICKER";
     private static final String ROUTE_DATE_PICKER = "ROUTE_DATE_PICKER";
+    private static final String ROUTE_PROGRESS = "ROUTE_PROGRESS";
 
     // mapping of route constant with resource string
     private Map<String, String> mConstantRouteMap;
@@ -32,18 +33,21 @@ public class NavExtDialogConfig {
         String routeDateTimePicker = context.getString(R.string.a_navigator_extension_dialog_route_date_time_picker);
         String routeTimePicker = context.getString(R.string.a_navigator_extension_dialog_route_time_picker);
         String routeDatePicker = context.getString(R.string.a_navigator_extension_dialog_route_date_picker);
+        String routeProgress = context.getString(R.string.a_navigator_extension_dialog_route_progress);
         mConstantRouteMap = new LinkedHashMap<>();
         mConstantRouteMap.put(ROUTE_MESSAGE, routeMessage);
         mConstantRouteMap.put(ROUTE_CONFIRM, routeConfirm);
         mConstantRouteMap.put(ROUTE_DATE_TIME_PICKER, routeDateTimePicker);
         mConstantRouteMap.put(ROUTE_TIME_PICKER, routeTimePicker);
         mConstantRouteMap.put(ROUTE_DATE_PICKER, routeDatePicker);
+        mConstantRouteMap.put(ROUTE_PROGRESS, routeProgress);
         mNavMap = new LinkedHashMap<>();
         mNavMap.put(routeMessage, (args, activity) -> new MessageSVDialog());
         mNavMap.put(routeConfirm, (args, activity) -> new ConfirmSVDialog());
         mNavMap.put(routeDateTimePicker, (args, activity) -> new DateTimePickerSVDialog());
         mNavMap.put(routeTimePicker, (args, activity) -> new TimePickerSVDialog());
         mNavMap.put(routeDatePicker, (args, activity) -> new DatePickerSVDialog());
+        mNavMap.put(routeProgress, (args, activity) -> new ProgressSVDialog());
     }
 
     /**
@@ -89,6 +93,18 @@ public class NavExtDialogConfig {
      */
     public String route_datePickerDialog() {
         return mConstantRouteMap.get(ROUTE_DATE_PICKER);
+    }
+
+    /**
+     * Route to a non-cancellable progress dialog with title, message and a
+     * horizontal progress line. The dialog has NO result: the caller is
+     * responsible for popping it (typically navigator.pop() from doFinally)
+     * when its async work completes. Back press and touching outside do
+     * nothing. The message and (optional) determinate progress can be
+     * streamed live via the returned Args.
+     */
+    public String route_progressDialog() {
+        return mConstantRouteMap.get(ROUTE_PROGRESS);
     }
 
     /**
@@ -290,5 +306,35 @@ public class NavExtDialogConfig {
         DatePickerSVDialog.Result result = DatePickerSVDialog.Result.of(navRoute);
         if (result == null) return null;
         return result.getDayOfMonth();
+    }
+
+    /**
+     * Preparing arguments for the progress dialog ({@link #ROUTE_PROGRESS})
+     * in indeterminate mode
+     *
+     * @param title   title to be shown
+     * @param message message body/content
+     * @return the typed Args so the caller can stream live updates via
+     * updateMessage/updateProgress (typed return is a deliberate deviation
+     * from the Serializable convention of the other args_ methods)
+     */
+    public ProgressSVDialog.Args args_progressDialog(String title, String message) {
+        return ProgressSVDialog.Args.newArgs(title, message);
+    }
+
+    /**
+     * Preparing arguments for the progress dialog ({@link #ROUTE_PROGRESS})
+     * in determinate mode, max non-null
+     *
+     * @param title   title to be shown
+     * @param message message body/content
+     * @param max     maximum value of the progress bar, null keeps the bar
+     *                in indeterminate mode
+     * @return the typed Args so the caller can stream live updates via
+     * updateMessage/updateProgress (typed return is a deliberate deviation
+     * from the Serializable convention of the other args_ methods)
+     */
+    public ProgressSVDialog.Args args_progressDialog(String title, String message, Integer max) {
+        return ProgressSVDialog.Args.newArgs(title, message, max);
     }
 }
