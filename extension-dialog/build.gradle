@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    compileSdk = 37
+    compileSdk 33
 
     defaultConfig {
         minSdkVersion 14
@@ -55,17 +55,4 @@ afterEvaluate {
             }
         }
     }
-}
-
-// JitPack injects an extra Maven publication per module under Gradle 9+
-// (named after the project). If it keeps different coordinates from the
-// release publication, generating the POM/module-metadata of dependent
-// modules hard-fails with "multiple publications that have different
-// coordinates". Align every non-release publication to the release
-// coordinates; container rules run after create-time configuration, so
-// this wins regardless of when JitPack injects it.
-publishing.publications.matching { it.name != 'release' }.all {
-    groupId = 'com.github.rh-id'
-    artifactId = 'a-navigator-extension-dialog'
-    version = '0.0.1'
 }

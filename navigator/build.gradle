@@ -4,7 +4,11 @@ plugins {
 }
 
 android {
-    compileSdk = 37
+    // 34 (not 37): AGP 8.2.0's SDK loader only reads package.xml schema v3 and
+    // cannot load the versioned android-37.0 platform (schema v4, new dir
+    // naming), so compileSdk 37 hard-fails with "Failed to find Platform SDK".
+    // 34 is AGP 8.2's max tested compileSdk; revisit after an AGP upgrade.
+    compileSdk 34
 
     defaultConfig {
         minSdkVersion 14
@@ -21,11 +25,6 @@ android {
     }
 
     compileOptions {
-        // NOTE: JitPack's tag builds have no jitpack.yml and rely on
-        // auto-detecting the JDK from these VERSION_17 strings ("Using
-        // JDK 17 (build.gradle)" in the v0.0.74 log). If these are ever
-        // refactored away, pin the JDK again or tags will build on the
-        // wrong JDK and fail AGP's Java-version check.
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -71,17 +70,4 @@ afterEvaluate {
             }
         }
     }
-}
-
-// JitPack injects an extra Maven publication per module under Gradle 9+
-// (named after the project). If it keeps different coordinates from the
-// release publication, generating the POM/module-metadata of dependent
-// modules hard-fails with "multiple publications that have different
-// coordinates". Align every non-release publication to the release
-// coordinates; container rules run after create-time configuration, so
-// this wins regardless of when JitPack injects it.
-publishing.publications.matching { it.name != 'release' }.all {
-    groupId = 'com.github.rh-id'
-    artifactId = 'a-navigator'
-    version = '0.0.1'
 }
