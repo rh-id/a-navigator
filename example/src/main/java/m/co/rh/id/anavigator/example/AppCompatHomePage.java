@@ -12,6 +12,7 @@ import com.google.android.material.navigation.NavigationView;
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
+import m.co.rh.id.anavigator.component.NavBackPressResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.example.extension.ExtensionHomePage;
 
@@ -64,12 +65,13 @@ public class AppCompatHomePage extends StatefulView<AppCompatActivity> implement
     }
 
     @Override
-    public void onBackPressed(View currentView, AppCompatActivity activity, INavigator navigator) {
+    public NavBackPressResult onBackPressed(View currentView, AppCompatActivity activity, INavigator navigator) {
         DrawerLayout drawerLayout = currentView.findViewById(R.id.drawer);
         if (drawerLayout != null && drawerLayout.isOpen()) {
-            drawerLayout.close();
+            return NavBackPressResult.noPop();
         } else {
             navigator.finishActivity("This is result from AppCompatHomePage");
+            return NavBackPressResult.noPop();
         }
     }
 }

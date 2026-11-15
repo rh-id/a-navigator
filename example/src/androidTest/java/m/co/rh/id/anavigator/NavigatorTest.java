@@ -1,5 +1,6 @@
 package m.co.rh.id.anavigator;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavBackEvent;
+import m.co.rh.id.anavigator.component.NavBackPressResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.component.NavOnRouteChangedListener;
 import m.co.rh.id.anavigator.example.MyApplication;
@@ -56,6 +58,16 @@ public class NavigatorTest {
 
     private static final long TIMEOUT_MS = 15000;
     private static final long QUIET_PERIOD_MS = 4500;
+
+    /**
+     * View tag marking the root view of the test-only scripted back page.
+     */
+    private static final String TAG_SCRIPTED_BACK_PAGE = "scripted_back_page";
+    /**
+     * Result scripted into the {@link NavBackPressResult#pop(Serializable)}
+     * decision of the test-only scripted back page.
+     */
+    private static final String TAG_SCRIPTED_BACK_RESULT = "scripted_back_result";
 
     /**
      * Navigator's NavViewLayout is set as the activity content view with this id.
@@ -827,8 +839,130 @@ public class NavigatorTest {
         return view != null && view.findViewById(R.id.textview_third) != null;
     }
 
+    private static boolean isScriptedBackDisplayed(RawActivity activity) {
+        View view = displayedView(activity);
+        return view != null && TAG_SCRIPTED_BACK_PAGE.equals(view.getTag());
+    }
+
+    /**
+     * Minimal test-only route implementing {@link NavOnBackPressed} that
+     * returns a scripted {@link NavBackPressResult} decision, so each
+     * contract case (pop with result, noPop, null = default) can be driven
+     * against a real navigator without depending on the example pages.
+     */
+    private static class ScriptedBackPage extends StatefulView<Activity> implements NavOnBackPressed {
+        static final int MODE_POP_WITH_RESULT = 1;
+        static final int MODE_NO_POP = 2;
+        static final int MODE_NULL = 3;
+        private int mMode;
+
+        void setMode(int mode) {
+            mMode = mode;
+        }
+
+        @Override
+        protected View createView(Activity activity, ViewGroup container) {
+            TextView textView = new TextView(activity);
+            textView.setText("ScriptedBackPage");
+            textView.setTag(TAG_SCRIPTED_BACK_PAGE);
+            return textView;
+        }
+
+        @Override
+        public NavBackPressResult onBackPressed(View currentView, Activity activity, INavigator navigator) {
+            switch (mMode) {
+                case MODE_POP_WITH_RESULT:
+                    return NavBackPressResult.pop(TAG_SCRIPTED_BACK_RESULT);
+                case MODE_NO_POP:
+                    return NavBackPressResult.noPop();
+                case MODE_NULL:
+                default:
+                    // no opinion: the navigator must apply its default (pop),
+                    // identical to a route that does not implement the interface
+                    return null;
+            }
+        }
+    }
+
     // ---------------------------------------------------------------------------------------------
-    // 9. Saved-state restore announces the restored stack to route listeners
+    // 9. NavOnBackPressed decision contract (back-press dispatch)
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    public void backPress_popResult_backPopsRoute_popCallbackReceivesResult() throws Exception {
+        launchAndResetToHome();
+        final AtomicReference<NavRoute> poppedRouteRef = new AtomicReference<>();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push((args, activity1) -> new ScriptedBackPage(), null,
+                    (navigator, navRoute, activity1, currentView) ->
+                            poppedRouteRef.set(navRoute));
+            assertTrue(isScriptedBackDisplayed(activity));
+            ScriptedBackPage page = (ScriptedBackPage) nav.getCurrentRoute().getStatefulView();
+            page.setMode(ScriptedBackPage.MODE_POP_WITH_RESULT);
+            // back press: the route's pop decision must pop it and the
+            // scripted result must be delivered to the popped NavRoute
+            nav.onBackPressed();
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+            assertNotNull("pop callback must have run", poppedRouteRef.get());
+            assertEquals("pop callback must deliver the scripted result",
+                    TAG_SCRIPTED_BACK_RESULT, poppedRouteRef.get().getRouteResult());
+        });
+    }
+
+    @Test
+    public void backPress_noPop_stackUnchanged() throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push((args, activity1) -> new ScriptedBackPage(), null, null);
+            assertTrue(isScriptedBackDisplayed(activity));
+            ScriptedBackPage page = (ScriptedBackPage) nav.getCurrentRoute().getStatefulView();
+            page.setMode(ScriptedBackPage.MODE_NO_POP);
+            // back press: an explicit noPop must swallow the back press and
+            // keep the route stack (and the displayed view) unchanged
+            nav.onBackPressed();
+            assertFalse(nav.isInitialRoute());
+            assertTrue("noPop must keep the scripted page on the stack",
+                    isScriptedBackDisplayed(activity));
+            assertEquals("noPop must not attach/detach anything",
+                    1, attachedChildCount(activity));
+            // the navigator stays fully usable: a following pop still works
+            assertTrue(nav.pop());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+        });
+    }
+
+    @Test
+    public void backPress_nullResult_defaultPopWithNullResult() throws Exception {
+        launchAndResetToHome();
+        final AtomicReference<NavRoute> poppedRouteRef = new AtomicReference<>();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push((args, activity1) -> new ScriptedBackPage(), null,
+                    (navigator, navRoute, activity1, currentView) ->
+                            poppedRouteRef.set(navRoute));
+            assertTrue(isScriptedBackDisplayed(activity));
+            ScriptedBackPage page = (ScriptedBackPage) nav.getCurrentRoute().getStatefulView();
+            page.setMode(ScriptedBackPage.MODE_NULL);
+            // back press: a null decision means "no opinion", the navigator
+            // must apply its default behavior (pop) exactly like for a route
+            // that does not implement NavOnBackPressed
+            nav.onBackPressed();
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertTrue(isHomeDisplayed(activity));
+            assertNotNull("pop callback must have run", poppedRouteRef.get());
+            assertNull("default pop must carry no result",
+                    poppedRouteRef.get().getRouteResult());
+        });
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 10. Saved-state restore announces the restored stack to route listeners
     // ---------------------------------------------------------------------------------------------
 
     @Test

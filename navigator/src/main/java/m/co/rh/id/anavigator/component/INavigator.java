@@ -290,6 +290,15 @@ public interface INavigator {
     /**
      * Signal to navigator that back button is pressed,
      * let the currently displayed view handle back button else {@link #pop()}
+     * <p>
+     * When the current top route's StatefulView implements
+     * {@link NavOnBackPressed}, the back press is forwarded to it and the
+     * route declares its outcome by returning a {@link NavBackPressResult}
+     * decision: pop (with optional result), noPop (route stack kept), or null
+     * (= no opinion, the navigator applies its default behavior which is
+     * {@link #pop()}, identical to a route that does not implement the
+     * interface). The only way for a route to swallow the back press is an
+     * explicit {@link NavBackPressResult#noPop()}.
      */
     void onBackPressed();
 
@@ -319,6 +328,10 @@ public interface INavigator {
      * StatefulView does NOT implement NavOnBackPressed, the navigator starts a
      * speculative pop animation: the current page shrinks/slides following the
      * gesture, revealing the previous page underneath.
+     * If the StatefulView DOES implement NavOnBackPressed, no animation is
+     * started: the route declares its back outcome per
+     * {@link NavBackPressResult} (pop, noPop, or null for the default pop)
+     * only when the gesture commits.
      * The actual route pop only happens when the gesture commits through
      * {@link #onBackPressed()}.
      *

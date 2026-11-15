@@ -24,6 +24,7 @@ import m.co.rh.id.anavigator.RouteOptions;
 import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.component.INavigator;
+import m.co.rh.id.anavigator.component.NavBackPressResult;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.example.animation.AnimationPage;
@@ -153,12 +154,12 @@ public class HomePage extends StatefulView<Activity> implements NavOnBackPressed
     }
 
     @Override
-    public void onBackPressed(View currentView, Activity activity, INavigator navigator) {
+    public NavBackPressResult onBackPressed(View currentView, Activity activity, INavigator navigator) {
         DrawerLayout drawerLayout = currentView.findViewById(R.id.drawer);
         if (drawerLayout != null && drawerLayout.isOpen()) {
-            drawerLayout.close();
+            return NavBackPressResult.noPop();
         } else {
-            navigator.pop();
+            return NavBackPressResult.pop();
         }
     }
 

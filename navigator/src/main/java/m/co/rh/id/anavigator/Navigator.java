@@ -56,6 +56,7 @@ import m.co.rh.id.anavigator.component.INavigator;
 import m.co.rh.id.anavigator.component.NavActivity;
 import m.co.rh.id.anavigator.component.NavActivityLifecycle;
 import m.co.rh.id.anavigator.component.NavBackEvent;
+import m.co.rh.id.anavigator.component.NavBackPressResult;
 import m.co.rh.id.anavigator.component.NavComponentCallback;
 import m.co.rh.id.anavigator.component.NavOnActivityResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
@@ -1105,20 +1106,29 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
                 popInternal(null, true, true, true);
                 return;
             }
-            // Interceptor case: the top route implements NavOnBackPressed, its
-            // back behavior is unknown (it may pop, it may not), so no gesture
+            // Interceptor case: the top route implements NavOnBackPressed and
+            // declares its outcome via a NavBackPressResult (pop with optional
+            // result, noPop, or null for the default pop), so no gesture
             // animation was ever started. Deliberate correctness-over-coverage
             // decision: it would be wrong to animate a pop that may not
             // happen. Fall through to the legacy handling below which forwards
-            // the back press to the page; since nothing was animated, there is
-            // nothing to cancel either.
+            // the back press to the page and applies the returned decision;
+            // since nothing was animated, there is nothing to cancel either.
         }
         if (!mNavRouteStack.isEmpty()) {
             StatefulView statefulView = mNavRouteStack.peek().getStatefulView();
             if (statefulView instanceof NavOnBackPressed) {
                 NavViewLayout viewAnimator = getViewAnimator();
-                ((NavOnBackPressed) statefulView).onBackPressed(viewAnimator.getCurrentView(),
-                        mActivity, this);
+                NavBackPressResult backPressResult = ((NavOnBackPressed) statefulView)
+                        .onBackPressed(viewAnimator.getCurrentView(),
+                                mActivity, this);
+                if (backPressResult == null) {
+                    // no opinion, default applies — identical to non-implementor
+                    pop();
+                } else if (backPressResult.shouldPop()) {
+                    pop(backPressResult.getResult());
+                }
+                // else: swallowed — the route explicitly keeps the stack
                 return;
             }
         }
@@ -1141,7 +1151,10 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
      *     <li>stack size more than 1 -> true, the navigator can pop</li>
      *     <li>stack size == 1 -> true only if the top StatefulView implements
      *     NavOnBackPressed (e.g. a home page that closes a drawer on back),
-     *     otherwise false because back would exit the activity anyway</li>
+     *     otherwise false because back would exit the activity anyway. The
+     *     implementor declares its outcome per {@link NavBackPressResult}
+     *     (pop, noPop, or null for the default pop), so back may still be
+     *     consumed by an explicit noPop</li>
      * </ul>
      */
     @Override

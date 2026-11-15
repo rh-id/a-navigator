@@ -11,6 +11,7 @@ import m.co.rh.id.anavigator.StatefulView;
 import m.co.rh.id.anavigator.annotation.NavInject;
 import m.co.rh.id.anavigator.annotation.NavViewNavigator;
 import m.co.rh.id.anavigator.component.INavigator;
+import m.co.rh.id.anavigator.component.NavBackPressResult;
 import m.co.rh.id.anavigator.component.NavOnBackPressed;
 import m.co.rh.id.anavigator.component.NavOnRouteChangedListener;
 import m.co.rh.id.anavigator.example.R;
@@ -90,11 +91,13 @@ public class BottomNavHomePage extends StatefulView<Activity> implements NavOnBa
     }
 
     @Override
-    public void onBackPressed(View currentView, Activity activity, INavigator navigator) {
+    public NavBackPressResult onBackPressed(View currentView, Activity activity, INavigator navigator) {
         if (mViewNavigator.isInitialRoute()) {
             navigator.pop();
+            return NavBackPressResult.noPop();
         } else {
             mViewNavigator.pop();
+            return NavBackPressResult.noPop();
         }
     }
 }
