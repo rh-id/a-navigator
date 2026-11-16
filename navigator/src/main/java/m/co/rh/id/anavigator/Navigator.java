@@ -11,10 +11,6 @@ import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.transition.Scene;
-import android.transition.Transition;
-import android.transition.TransitionInflater;
-import android.transition.TransitionManager;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.view.View;
@@ -23,6 +19,11 @@ import android.view.ViewPropertyAnimator;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
+
+import androidx.transition.Scene;
+import androidx.transition.Transition;
+import androidx.transition.TransitionInflater;
+import androidx.transition.TransitionManager;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -1832,6 +1833,38 @@ class SnapshotHandler {
     }
 }
 
+/**
+ * Extend Scene because Scene doesn't have proper hashCode and equals calculation.
+ * Scene keys are cached in TransitionManager which uses ArrayMap internally.
+ * This ArrayMap has the same behavior as HashMap which depends on hashCode to set and remove value.
+ * If TransitionManager.setTransition is being called multiple times to the same SceneRoot and Layout instances,
+ * then it is possible for out of memory to happen since the internal ArrayMap keeps growing and old values never replaced.
+ */
+class NavScene extends Scene {
+
+    private View mLayout;
+
+    public NavScene(ViewGroup sceneRoot, View layout) {
+        super(sceneRoot, layout);
+        mLayout = layout;
+    }
+
+    @Override
+    public int hashCode() {
+        return getSceneRoot().hashCode() + mLayout.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NavScene)) return false;
+
+        NavScene navScene = (NavScene) o;
+
+        return getSceneRoot().equals(navScene.getSceneRoot()) && mLayout.equals(navScene.mLayout);
+    }
+}
+
 class NavViewLayout extends FrameLayout {
 
     private Animation mInAnimation;
@@ -1876,9 +1909,6 @@ class NavViewLayout extends FrameLayout {
     }
 
     private Transition getTransitionFromCache(Integer transitionId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            return null;
-        }
         Transition transition = mTransitionCache.get(transitionId);
         if (transition == null) {
             transition = TransitionInflater.from(getContext()).inflateTransition(transitionId);
@@ -1955,57 +1985,45 @@ class NavViewLayout extends FrameLayout {
         View destView = mViewStack.get(index);
         int currentViewIdx = mViewStack.indexOf(currentView);
         RouteOptions currentRouteOptions = mNavigator.getCurrentRoute().getRouteOptions();
-        boolean transitioned = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Transition destTransition = null;
-            if (currentViewIdx > index) {
-                // show prev view
-                if (currentRouteOptions instanceof TransitionRouteOptions) {
-                    Integer exitTransitionResId = ((TransitionRouteOptions) currentRouteOptions).exitTransitionResId;
-                    if (exitTransitionResId != null) {
-                        destTransition = getTransitionFromCache(exitTransitionResId);
-                    }
-                }
-            } else if (currentViewIdx < index) {
-                // show next view
-                if (currentRouteOptions instanceof TransitionRouteOptions) {
-                    Integer enterTransitionResId = ((TransitionRouteOptions) currentRouteOptions).enterTransitionResId;
-                    if (enterTransitionResId != null) {
-                        destTransition = getTransitionFromCache(enterTransitionResId);
-                    }
+        Transition destTransition = null;
+        if (currentViewIdx > index) {
+            // show prev view
+            if (currentRouteOptions instanceof TransitionRouteOptions) {
+                Integer exitTransitionResId = ((TransitionRouteOptions) currentRouteOptions).exitTransitionResId;
+                if (exitTransitionResId != null) {
+                    destTransition = getTransitionFromCache(exitTransitionResId);
                 }
             }
-            if (destTransition != null) {
-                // force-complete any pending or running transition on this
-                // scene root first: the framework TransitionManager.changeScene
-                // silently skips the whole scene swap when
-                // sPendingTransitions.contains(sceneRoot), which would swallow
-                // a same-frame consecutive navigation (e.g. push then replace)
-                // and leave the previous view displayed. That pending-skip
-                // guard only exists on API 23+, so only there go() needs to be
-                // unblocked; below API 23 go() executes unconditionally (rapid
-                // navigation may visually overlap transitions but nothing is
-                // silently swallowed) while endTransitions(ViewGroup) does not
-                // exist before API 23 and would crash with NoSuchMethodError.
-                // The interrupted animation on rapid navigation is an
-                // acceptable visual cost.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    TransitionManager.endTransitions(this);
+        } else if (currentViewIdx < index) {
+            // show next view
+            if (currentRouteOptions instanceof TransitionRouteOptions) {
+                Integer enterTransitionResId = ((TransitionRouteOptions) currentRouteOptions).enterTransitionResId;
+                if (enterTransitionResId != null) {
+                    destTransition = getTransitionFromCache(enterTransitionResId);
                 }
-                Scene nextScene = new Scene(this, destView);
-                // Use the static go() instead of TransitionManager.setTransition
-                // plus transitionTo(): transitionTo resolves the transition
-                // through the manager's Scene -> Transition map which
-                // accumulates a permanent entry per navigation and every
-                // Scene strongly references its (soon discarded) route view,
-                // which leaks memory across a session. Passing the transition
-                // directly to go() is behaviorally identical while the map is
-                // never populated.
-                TransitionManager.go(nextScene, destTransition);
-                transitioned = true;
             }
         }
-        if (!transitioned) {
+        if (destTransition != null) {
+            // force-complete any pending or running transition on this scene
+            // root first: androidx.transition's TransitionManager.changeScene
+            // silently skips the whole scene swap when
+            // sPendingTransitions.contains(sceneRoot), which would swallow a
+            // same-frame consecutive navigation and leave the previous view
+            // displayed. The interrupted animation on rapid navigation is an
+            // acceptable visual cost.
+            TransitionManager.endTransitions(this);
+            Scene nextScene = new NavScene(this, destView);
+            // Use the static go() instead of TransitionManager.setTransition
+            // plus transitionTo(): setTransition accumulates a permanent
+            // Scene -> Transition map entry per navigation and every NavScene
+            // strongly references its (soon discarded) route view, which leaks
+            // memory across a session. transitionTo(scene) only resolves the
+            // transition through that map right before invoking
+            // changeScene(scene, transition), so passing the transition
+            // directly to go() is behaviorally identical while the map is
+            // never populated.
+            TransitionManager.go(nextScene, destTransition);
+        } else {
             // no transition, use default
             if (currentView != null) {
                 if (mOutAnimation != null) {
