@@ -324,14 +324,15 @@ public interface INavigator {
      * Only meaningful when {@link #shouldInterceptBack()} returned true for
      * the gesture; otherwise the event is ignored by the navigator.
      * <p>
-     * If the current route can be popped (stack size more than 1) and its
-     * StatefulView does NOT implement NavOnBackPressed, the navigator starts a
-     * speculative pop animation: the current page shrinks/slides following the
-     * gesture, revealing the previous page underneath.
-     * If the StatefulView DOES implement NavOnBackPressed, no animation is
-     * started: the route declares its back outcome per
-     * {@link NavBackPressResult} (pop, noPop, or null for the default pop)
-     * only when the gesture commits.
+     * DELIBERATE NO-OP in the navigator: nothing is armed here. Android 16
+     * (API 36) dispatches synthetic predictive-back sessions for plain
+     * back-button/keycode presses and such a session can dangle (started with
+     * no commit and no cancel), so the gesture is armed LAZILY by
+     * {@link #onBackProgressed(NavBackEvent)} at the first real progress
+     * &gt; 0, where the speculative pop animation is started (previous page
+     * attached beneath the current one) unless the current route's
+     * StatefulView implements {@link NavOnBackPressed} (its back outcome is
+     * declared per {@link NavBackPressResult} only when the gesture commits).
      * The actual route pop only happens when the gesture commits through
      * {@link #onBackPressed()}.
      *
@@ -345,9 +346,10 @@ public interface INavigator {
 
     /**
      * Signal that the ongoing predictive back gesture progressed.
-     * Only meaningful after {@link #onBackStarted(NavBackEvent)} was consumed
-     * by this navigator; the navigator updates the gesture-driven pop
-     * animation with the event progress (clamped to 0..1).
+     * The FIRST progress &gt; 0 arms the gesture (this is the primary arming
+     * path, see {@link #onBackStarted(NavBackEvent)}); afterwards the
+     * navigator updates the gesture-driven pop animation with the event
+     * progress (clamped to 0..1). Progress == 0 never arms anything.
      * <p>
      * The actual route pop only happens when the gesture commits through
      * {@link #onBackPressed()}.

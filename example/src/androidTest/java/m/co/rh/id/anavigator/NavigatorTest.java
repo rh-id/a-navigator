@@ -516,12 +516,17 @@ public class NavigatorTest {
             INavigator nav = navigator(activity);
             nav.push(Routes.SECOND_PAGE, null, null, null);
             assertTrue(isSecondDisplayed(activity));
-            // gesture start: the previous page view is attached underneath
+            // gesture start: with lazy arming it must NOT attach anything
+            // yet (Android 16 synthetic sessions can dangle after started)
             nav.onBackStarted(gestureStartEvent());
-            assertEquals("gesture start must attach the previous page view beneath",
-                    2, attachedChildCount(activity));
-            // gesture progress drives the animation transforms
+            assertEquals("gesture start must NOT arm the speculative pop",
+                    1, attachedChildCount(activity));
+            // the first progress > 0 arms the gesture lazily: the previous
+            // page view is attached underneath
             nav.onBackProgressed(gestureProgressEvent(0.4f));
+            assertEquals("first progress > 0 must attach the previous page"
+                    + " view beneath", 2, attachedChildCount(activity));
+            // gesture progress drives the animation transforms
             nav.onBackProgressed(gestureProgressEvent(1f));
             assertEquals(2, attachedChildCount(activity));
             // commit: exactly one pop, the previous page displayed, no standard
@@ -611,6 +616,34 @@ public class NavigatorTest {
     }
 
     @Test
+    public void predictiveBack_danglingStartedSession_neverArms_andNextCommitPopsCleanly()
+            throws Exception {
+        launchAndResetToHome();
+        mScenario.onActivity(activity -> {
+            INavigator nav = navigator(activity);
+            nav.push(Routes.SECOND_PAGE, null, null, null);
+            assertTrue(isSecondDisplayed(activity));
+            // Android 16 synthetic dangling session: onBackStarted arrives
+            // (progress 0.0) but neither a commit nor a cancel EVER follows.
+            // With lazy arming the session must not touch the view hierarchy.
+            nav.onBackStarted(gestureStartEvent());
+            assertEquals("a dangling started session must NOT arm the"
+                    + " speculative pop (no previous view attached beneath)",
+                    1, attachedChildCount(activity));
+            assertEquals(Routes.SECOND_PAGE, nav.getCurrentRoute().getRouteName());
+            assertFalse(nav.isInitialRoute());
+            // (no progress, no cancel - the session dangles)
+            // the plain back press that follows must pop cleanly through the
+            // legacy path because mPredictiveBackActive stayed false
+            nav.onBackPressed();
+            assertEquals(Routes.HOME_PAGE, nav.getCurrentRoute().getRouteName());
+            assertTrue(nav.isInitialRoute());
+            assertEquals(1, attachedChildCount(activity));
+            assertTrue(isHomeDisplayed(activity));
+        });
+    }
+
+    @Test
     public void predictiveBack_interceptorPage_noAnimation_commitDeliversPageBackHandling()
             throws Exception {
         launchAndResetToHome();
@@ -644,6 +677,9 @@ public class NavigatorTest {
             INavigator nav = navigator(activity);
             nav.push(Routes.SECOND_PAGE, null, null, null);
             nav.onBackStarted(gestureStartEvent());
+            // first progress > 0 arms the gesture (lazy arming: started no
+            // longer attaches anything)
+            nav.onBackProgressed(gestureProgressEvent(0.4f));
             assertEquals(2, attachedChildCount(activity));
             // a programmatic pop lands while the gesture is in flight: the
             // navigator must auto-cancel the gesture and complete the pop
@@ -677,6 +713,9 @@ public class NavigatorTest {
             INavigator nav = navigator(activity);
             nav.push(Routes.SECOND_PAGE, null, null, null);
             nav.onBackStarted(gestureStartEvent());
+            // first progress > 0 arms the gesture (lazy arming: started no
+            // longer attaches anything)
+            nav.onBackProgressed(gestureProgressEvent(0.4f));
             assertEquals(2, attachedChildCount(activity));
             // a push lands while the gesture is in flight: auto-cancel then
             // complete the push (ThirdPage is an anonymous route)
@@ -712,10 +751,12 @@ public class NavigatorTest {
             nav.push(Routes.SECOND_PAGE, null, null, null);
             nav.push((args, activity1) -> new SecondPage(), null, null, null);
             assertTrue(isSecondDisplayed(activity));
-            // progressed delivered WITHOUT a preceding started: the navigator
-            // must normalize it into a start (speculative pop), no crash
+            // progressed delivered WITHOUT a preceding started: this is now
+            // the PRIMARY arming path (lazy arming at the first progress > 0,
+            // onBackStarted is a deliberate no-op against dangling synthetic
+            // sessions), no crash
             nav.onBackProgressed(gestureProgressEvent(0.5f));
-            assertEquals("normalized start must attach the previous page view"
+            assertEquals("first progress > 0 must attach the previous page view"
                             + " beneath the current one",
                     2, attachedChildCount(activity));
             // route intact: [HOME, SECOND#1, SECOND#2(anonymous top)] -
@@ -758,6 +799,9 @@ public class NavigatorTest {
             INavigator nav = navigator(activity);
             nav.push(Routes.SECOND_PAGE, null, null, null);
             nav.onBackStarted(gestureStartEvent());
+            // first progress > 0 arms the gesture (lazy arming: started no
+            // longer attaches anything)
+            nav.onBackProgressed(gestureProgressEvent(0.4f));
             assertEquals(2, attachedChildCount(activity));
             // a replace lands while the gesture is in flight: the navigator
             // must auto-cancel the gesture and complete the replace
@@ -803,6 +847,9 @@ public class NavigatorTest {
             assertTrue(isSecondDisplayed(activity));
             // gesture on the top page, then commit
             nav.onBackStarted(gestureStartEvent());
+            // first progress > 0 arms the gesture (lazy arming: started no
+            // longer attaches anything)
+            nav.onBackProgressed(gestureProgressEvent(0.4f));
             assertEquals(2, attachedChildCount(activity));
             nav.onBackPressed();
             assertEquals(Routes.SECOND_PAGE, nav.getCurrentRoute().getRouteName());

@@ -1180,6 +1180,69 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             // when back would not be consumed by this navigator anyway
             return;
         }
+        // Deliberately NO arming here (the method body is a no-op beyond the
+        // guards above). Android 16 (API 36) dispatches synthetic
+        // predictive-back sessions for plain back-button/keycode presses, and
+        // such a session can DANGLE: onBackStarted arrives (progress 0.0) but
+        // neither onBackPressed (commit) nor onBackCancelled ever follows
+        // (observed live on API 36). Arming the speculative pop at started
+        // would attach the previous view beneath the current page and leave
+        // it there indefinitely when the session dangles. The gesture is
+        // therefore armed LAZILY by armPredictiveBack(), called from
+        // onBackProgressed at the first real progress > 0: real gestures
+        // reach that within a frame or two of started, while dangling
+        // sessions never touch the view hierarchy. A dangling session that is
+        // nevertheless committed later is still handled correctly:
+        // onBackPressed() sees mPredictiveBackActive == false and takes the
+        // legacy pop path.
+    }
+
+    @Override
+    public void onBackProgressed(NavBackEvent backEvent) {
+        if (backEvent == null) {
+            return;
+        }
+        if (!mPredictiveBackActive) {
+            if (backEvent.getProgress() <= 0f) {
+                // progress 0 proves nothing: dangling synthetic sessions
+                // (Android 16) also report progress 0.0. Only a REAL
+                // progress > 0 may touch the view hierarchy.
+                return;
+            }
+            // First progress > 0: arm the gesture. This is now the PRIMARY
+            // arming path (onBackStarted is a deliberate no-op against
+            // dangling synthetic sessions); it also keeps normalizing hosts
+            // that deliver progressed without any preceding started event.
+            // The progressed event's touch coords are valid, so the direction
+            // resolves from it just like it previously did from started.
+            armPredictiveBack(backEvent);
+        }
+        if (mPredictiveBackActive) {
+            NavViewLayout viewAnimator = getViewAnimator();
+            if (viewAnimator != null && viewAnimator.isPredictiveBackActive()) {
+                viewAnimator.updatePredictiveBack(backEvent.getProgress());
+            }
+            // when no animation is running (interceptor case) there is nothing
+            // to update
+        }
+    }
+
+    /**
+     * Arms the predictive back gesture. Called LAZILY from
+     * {@link #onBackProgressed(NavBackEvent)} at the first progress &gt; 0,
+     * never from {@link #onBackStarted(NavBackEvent)} (see the rationale
+     * documented there). Runs the same guards and resolution that
+     * onBackStarted previously ran: resolves the gesture kind (speculative
+     * pop vs. interceptor) from the current route stack and sets
+     * {@code mPredictiveBackActive} accordingly.
+     */
+    private void armPredictiveBack(NavBackEvent backEvent) {
+        if (backEvent == null || mIsNavigating || !shouldInterceptBack()) {
+            // defensive no-op: no gesture can be meaningfully tracked while a
+            // navigation is running, when the stack is empty/being restored or
+            // when back would not be consumed by this navigator anyway
+            return;
+        }
         StatefulView currentStatefulView = mNavRouteStack.peek().getStatefulView();
         int stackSize = mNavRouteStack.size();
         if (stackSize > 1 && !(currentStatefulView instanceof NavOnBackPressed)) {
@@ -1188,7 +1251,8 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
             // reveals the previous page underneath. The route itself is only
             // popped when the gesture commits via onBackPressed().
             NavViewLayout viewAnimator = getViewAnimator();
-            if (viewAnimator != null && viewAnimator.startPredictiveBack(backEvent)) {
+            boolean startResult = viewAnimator != null && viewAnimator.startPredictiveBack(backEvent);
+            if (startResult) {
                 mPredictiveBackActive = true;
             }
         } else if (stackSize > 1) {
@@ -1203,27 +1267,6 @@ public class Navigator<ACT extends Activity, SV extends StatefulView> implements
         // stackSize == 1 (e.g. a home page with drawer/double-back handling):
         // no animation and no flag, the commit simply goes through the legacy
         // onBackPressed() path
-    }
-
-    @Override
-    public void onBackProgressed(NavBackEvent backEvent) {
-        if (backEvent == null) {
-            return;
-        }
-        if (!mPredictiveBackActive) {
-            // defensive normalization: some hosts may deliver progressed
-            // without a preceding started event (missed callback), behave like
-            // onBackStarted first
-            onBackStarted(backEvent);
-        }
-        if (mPredictiveBackActive) {
-            NavViewLayout viewAnimator = getViewAnimator();
-            if (viewAnimator != null && viewAnimator.isPredictiveBackActive()) {
-                viewAnimator.updatePredictiveBack(backEvent.getProgress());
-            }
-            // when no animation is running (interceptor case) there is nothing
-            // to update
-        }
     }
 
     @Override
@@ -2171,8 +2214,9 @@ class NavViewLayout extends FrameLayout {
      * the current one at index 0 (bottom Z order) with an initial 0.95 scale,
      * the current view stays topmost untouched.
      *
-     * @param event the gesture start event, its touch point decides the slide
-     *              direction (toward the gesture edge)
+     * @param event the arming event (the first gesture progress &gt; 0, see
+     *              Navigator.armPredictiveBack), its touch point decides the
+     *              slide direction (toward the gesture edge)
      * @return true if the gesture animation was started, false when there is
      * no previous view to reveal (nothing to animate)
      */
@@ -2322,12 +2366,12 @@ class NavViewLayout extends FrameLayout {
         // bring the revealed page to full scale while the current page slides
         // out toward the gesture edge, shrinks and fades away
         runPredictiveBackAnimation(previousView, 200L, 0f, 1f, 1f, 1f, false, null);
-        runPredictiveBackAnimation(currentView, 200L,
-                direction * 0.5f * width, 0.85f, 0.85f, 0f, true, () -> {
-                    // remove only the captured view: the route bookkeeping
-                    // already ran, so the layout may have been navigated again
-                    // in the meantime and this view may even have been swept
-                    if (currentView.getParent() == this) {
+                runPredictiveBackAnimation(currentView, 200L,
+                        direction * 0.5f * width, 0.85f, 0.85f, 0f, true, () -> {
+                            // remove only the captured view: the route bookkeeping
+                            // already ran, so the layout may have been navigated again
+                            // in the meantime and this view may even have been swept
+                            if (currentView.getParent() == this) {
                         removeView(currentView);
                     }
                     currentView.setAlpha(1f);
@@ -2356,7 +2400,11 @@ class NavViewLayout extends FrameLayout {
     }
 
     private float resolvePredictiveBackDirection(NavBackEvent event) {
-        // slide toward the screen edge the gesture started from
+        // slide toward the screen edge the gesture started from. Since arming
+        // is lazy (first progress > 0), this now resolves from the FIRST
+        // PROGRESS event's touch coords instead of the started event's -
+        // acceptable: a real gesture stays on the same screen side between
+        // started and the first progress, so the direction is unchanged.
         return event.getTouchX() < getWidth() / 2f ? -1f : 1f;
     }
 
