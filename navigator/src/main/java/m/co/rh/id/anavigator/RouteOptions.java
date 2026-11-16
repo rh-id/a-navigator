@@ -30,11 +30,20 @@ public class RouteOptions implements Externalizable {
     }
 
     /**
-     * Helper method to setup enter and exit transition (using transition framework)
+     * Helper method to setup enter and exit transition (using the platform transition framework, android.transition).
+     * Requires API 21+, on older devices (API 14-20) navigation silently falls back to the default
+     * swap animations (the transition resource ids are ignored). The transition XML must only use
+     * vocabulary available in the device's framework implementation (e.g. {@code <explode>}/
+     * {@code <changeTransform>} need API 21, {@code android:matchOrder} needs API 22,
+     * {@code <changeScroll>}/{@code <changeClipBounds>} need API 23), unsupported vocabulary
+     * throws on the older frameworks where the previously bundled transition support library
+     * used to parse it.
      *
-     * @param enterTransitionResId enter transition resource id to be inflated using TransitionInflater.inflateTransition,
+     * @param enterTransitionResId enter transition resource id to be inflated using the platform
+     *                             TransitionInflater.inflateTransition (android.transition),
      *                             if null means no transition
-     * @param exitTransitionResId  exit transition resource id to be inflated using TransitionInflater.inflateTransition,
+     * @param exitTransitionResId  exit transition resource id to be inflated using the platform
+     *                             TransitionInflater.inflateTransition (android.transition),
      *                             if null means no transition
      * @return RouteOptions instance with enter and exit using transition framework setup
      */

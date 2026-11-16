@@ -51,7 +51,8 @@ import static org.junit.Assert.fail;
  * (stale displayed view, followed by IndexOutOfBoundsException on back-press),
  * - retry() displaying the bottom-of-stack view instead of the rebuilt route,
  * - replace() on the initial route leaving a dead view inside the view stack,
- * and the TransitionManager scene-map leak plus the saved-state consistency.
+ * and the framework TransitionManager scene-to-transition map leak plus the
+ * saved-state consistency.
  */
 @RunWith(AndroidJUnit4.class)
 public class NavigatorTest {
